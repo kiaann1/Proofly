@@ -13,6 +13,7 @@ export interface PersonalInfo {
   github: string;
   portfolio: string;
   salaryExpectation: string;
+  showSalaryInCV: boolean;
   summary: string;
 }
 
@@ -63,6 +64,7 @@ export interface CVData {
   certifications: Certification[];
   languages: Language[];
   template: CVTemplate;
+  styling?: CVStyling;
 }
 
 export interface CVTemplate {
@@ -125,3 +127,59 @@ export interface JobDescription {
 // Filter and Sort Types
 export type FilterType = 'all' | 'recent' | 'experience' | 'education';
 export type SortType = 'date' | 'name' | 'relevance';
+
+// CV Styling Types
+export interface CVStyling {
+  name: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+    fontWeight: string;
+  };
+  contact: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+  };
+  sectionTitle: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+    fontWeight: string;
+  };
+  position: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+    fontWeight: string;
+  };
+  company: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+  };
+  description: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+    lineHeight: string;
+  };
+  skills: {
+    fontFamily: string;
+    fontSize: string;
+    color: string;
+    backgroundColor: string;
+  };
+}
+
+export interface FontOption {
+  value: string;
+  label: string;
+  category: 'serif' | 'sans-serif' | 'monospace';
+}
+
+export interface ColorOption {
+  value: string;
+  label: string;
+  preview: string;
+}

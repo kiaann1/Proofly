@@ -59,7 +59,7 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
   overallScore = Math.max(25, overallScore);
   
   // Generate suggestions based on analysis
-  const suggestions = generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription);
+  const suggestions = generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData);
   
   // Create overall feedback
   const overallFeedback = generateOverallFeedback(overallScore, keywordAnalysis, formatAnalysis, contentAnalysis);
@@ -111,22 +111,51 @@ function parseJobDescription(text: string): JobDescription {
  */
 function analyzeKeywords(cvData: CVData, jobDescription: JobDescription): KeywordAnalysis {
   const cvText = getCVText(cvData);
-  const cvWords = cvText.toLowerCase().split(/\s+/);
+  const cvWords = new Set(cvText.toLowerCase().split(/\W+/).filter(word => word.length > 2));
   
   const matchedKeywords: string[] = [];
   const missingKeywords: string[] = [];
   const keywordDensity: { [key: string]: number } = {};
   
+  // Helper function to check if a keyword exists in CV text
+  const checkKeywordMatch = (keyword: string): boolean => {
+    const keywordLower = keyword.toLowerCase().trim();
+    const keywordWords = keywordLower.split(/\W+/).filter(word => word.length > 2);
+    
+    // Check for exact matches and partial matches
+    return keywordWords.some(kw => {
+      // Exact word match
+      if (cvWords.has(kw)) return true;
+      
+      // Check for plurals/variations (e.g., skill/skills, manage/management)
+      const variations = [
+        kw + 's', kw + 'ing', kw + 'ed', kw + 'er', kw + 'ment',
+        kw.endsWith('s') ? kw.slice(0, -1) : null,
+        kw.endsWith('ing') ? kw.slice(0, -3) : null,
+        kw.endsWith('ed') ? kw.slice(0, -2) : null,
+        kw.endsWith('er') ? kw.slice(0, -2) : null,
+        kw.endsWith('ment') ? kw.slice(0, -4) : null,
+      ].filter(Boolean);
+      
+      return variations.some(variation => cvWords.has(variation as string));
+    });
+  };
+  
+  // Count keyword occurrences more accurately
+  const countKeywordOccurrences = (keyword: string): number => {
+    const keywordLower = keyword.toLowerCase();
+    const regex = new RegExp(`\\b${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\w*\\b`, 'gi');
+    const matches = cvText.match(regex);
+    return matches ? matches.length : 0;
+  };
+  
   // If no job description, provide default industry keywords
   if (jobDescription.extractedKeywords.length === 0) {
     const defaultKeywords = ['professional', 'experience', 'skills', 'education', 'management', 'development', 'team', 'project'];
     defaultKeywords.forEach(keyword => {
-      const keywordLower = keyword.toLowerCase();
-      const matches = cvWords.filter(word => word.includes(keywordLower)).length;
-      
-      if (matches > 0) {
+      if (checkKeywordMatch(keyword)) {
         matchedKeywords.push(keyword);
-        keywordDensity[keyword] = matches;
+        keywordDensity[keyword] = countKeywordOccurrences(keyword);
       } else {
         missingKeywords.push(keyword);
       }
@@ -142,14 +171,11 @@ function analyzeKeywords(cvData: CVData, jobDescription: JobDescription): Keywor
     };
   }
   
-  // Check each keyword from job description
+  // Check each keyword from job description with improved matching
   jobDescription.extractedKeywords.forEach(keyword => {
-    const keywordLower = keyword.toLowerCase();
-    const matches = cvWords.filter(word => word.includes(keywordLower)).length;
-    
-    if (matches > 0) {
+    if (checkKeywordMatch(keyword)) {
       matchedKeywords.push(keyword);
-      keywordDensity[keyword] = matches;
+      keywordDensity[keyword] = countKeywordOccurrences(keyword);
     } else {
       missingKeywords.push(keyword);
     }
@@ -319,63 +345,166 @@ function generateSuggestions(
   keywordAnalysis: KeywordAnalysis,
   formatAnalysis: FormatAnalysis,
   contentAnalysis: ContentAnalysis,
-  jobDescription: JobDescription
+  jobDescription: JobDescription,
+  cvData?: CVData
 ): ATSSuggestion[] {
   const suggestions: ATSSuggestion[] = [];
   let suggestionId = 1;
   
-  // Keyword suggestions
+  // High Priority Keyword Suggestions
   if (keywordAnalysis.missingKeywords.length > 0) {
-    const topMissing = keywordAnalysis.missingKeywords.slice(0, 5);
+    const criticalKeywords = keywordAnalysis.missingKeywords.slice(0, 3);
+    const mediumKeywords = keywordAnalysis.missingKeywords.slice(3, 8);
+    
+    if (criticalKeywords.length > 0) {
+      suggestions.push({
+        id: (suggestionId++).toString(),
+        type: 'keyword',
+        priority: 'high',
+        title: `Add ${criticalKeywords.length} Critical Keywords`,
+        description: `These high-impact keywords are missing from your CV: ${criticalKeywords.join(', ')}. Consider incorporating them into your professional summary, experience descriptions, or skills section.`,
+        actionable: true,
+        autoFixAvailable: true,
+      });
+    }
+    
+    if (mediumKeywords.length > 0) {
+      suggestions.push({
+        id: (suggestionId++).toString(),
+        type: 'keyword',
+        priority: 'medium',
+        title: `Consider Adding ${mediumKeywords.length} Additional Keywords`,
+        description: `These relevant keywords could strengthen your application: ${mediumKeywords.join(', ')}. Include them where they naturally fit your experience.`,
+        actionable: true,
+        autoFixAvailable: true,
+      });
+    }
+  }
+  
+  // Professional Summary Enhancement
+  if (!cvData?.personalInfo?.summary || cvData.personalInfo.summary.length < 100) {
     suggestions.push({
       id: (suggestionId++).toString(),
-      type: 'keyword',
+      type: 'content',
       priority: 'high',
-      title: 'Add Missing Keywords',
-      description: `Consider adding these relevant keywords: ${topMissing.join(', ')}`,
+      title: 'Enhance Professional Summary',
+      description: 'Your professional summary should be 3-4 sentences highlighting your key qualifications, years of experience, and career objectives. Include 2-3 keywords from the job description.',
       actionable: true,
-      autoFixAvailable: false,
+      autoFixAvailable: true,
     });
   }
   
-  // Format suggestions
-  formatAnalysis.problematicElements.forEach(element => {
+  // Skills Section Optimization
+  if (!cvData?.skills || cvData.skills.length < 5) {
     suggestions.push({
       id: (suggestionId++).toString(),
-      type: 'format',
-      priority: element.includes('Missing') ? 'high' : 'medium',
-      title: 'Format Issue Detected',
-      description: element,
+      type: 'content',
+      priority: 'high',
+      title: 'Expand Skills Section',
+      description: 'Add more relevant technical and soft skills. Aim for 8-12 skills that match the job requirements. Include both technical tools and transferable skills.',
       actionable: true,
-      autoFixAvailable: element.includes('Missing'),
+      autoFixAvailable: true,
     });
-  });
+  }
   
-  // Content suggestions
+  // Experience Quantification
   if (!contentAnalysis.hasMeasurableResults) {
     suggestions.push({
       id: (suggestionId++).toString(),
       type: 'content',
       priority: 'high',
       title: 'Add Quantifiable Achievements',
-      description: 'Include numbers, percentages, or metrics to demonstrate your impact (e.g., "Increased sales by 25%")',
+      description: 'Include specific numbers, percentages, dollar amounts, or time frames in your achievements. Examples: "Increased sales by 25%", "Managed team of 10", "Reduced processing time by 30%".',
       actionable: true,
       autoFixAvailable: false,
     });
   }
   
+  // Action Verbs Enhancement
   if (!contentAnalysis.hasActionVerbs) {
     suggestions.push({
       id: (suggestionId++).toString(),
       type: 'content',
       priority: 'medium',
-      title: 'Use Strong Action Verbs',
-      description: 'Start bullet points with powerful action verbs like "achieved," "managed," "led," or "developed"',
+      title: 'Use Stronger Action Verbs',
+      description: 'Replace weak verbs with powerful action words. Instead of "responsible for", use "managed", "led", "developed", "implemented", "optimized", "achieved".',
+      actionable: true,
+      autoFixAvailable: true,
+    });
+  }
+  
+  // Experience Section Completeness
+  if (!cvData?.experience || cvData.experience.length === 0) {
+    suggestions.push({
+      id: (suggestionId++).toString(),
+      type: 'structure',
+      priority: 'high',
+      title: 'Add Work Experience',
+      description: 'Include your work history with job titles, company names, dates, and 3-5 bullet points describing your key achievements and responsibilities.',
+      actionable: true,
+      autoFixAvailable: false,
+    });
+  } else if (cvData.experience.some(exp => exp.achievements.length < 2)) {
+    suggestions.push({
+      id: (suggestionId++).toString(),
+      type: 'content',
+      priority: 'medium',
+      title: 'Expand Job Descriptions',
+      description: 'Each role should have 3-5 bullet points describing specific achievements and responsibilities. Focus on results and impact rather than duties.',
       actionable: true,
       autoFixAvailable: false,
     });
   }
   
+  // Format suggestions with more detail
+  formatAnalysis.problematicElements.forEach(element => {
+    let priority: 'high' | 'medium' | 'low' = 'medium';
+    let enhancedDescription = element;
+    
+    if (element.includes('Missing')) {
+      priority = 'high';
+      if (element.includes('contact')) {
+        enhancedDescription = 'Add complete contact information including phone number, professional email, and location (city, state). Consider adding LinkedIn profile.';
+      }
+    }
+    
+    suggestions.push({
+      id: (suggestionId++).toString(),
+      type: 'format',
+      priority,
+      title: 'Format Optimization',
+      description: enhancedDescription,
+      actionable: true,
+      autoFixAvailable: element.includes('Missing'),
+    });
+  });
+  
+  // Advanced ATS Optimization
+  if (keywordAnalysis.score < 70) {
+    suggestions.push({
+      id: (suggestionId++).toString(),
+      type: 'keyword',
+      priority: 'medium',
+      title: 'Improve Keyword Density',
+      description: 'Your keyword match score is below 70%. Review the job description and naturally incorporate more relevant terms throughout your CV.',
+      actionable: true,
+      autoFixAvailable: false,
+    });
+  }
+  
+  // Education Enhancement
+  if (!contentAnalysis.sectionCompleteness.education) {
+    suggestions.push({
+      id: (suggestionId++).toString(),
+      type: 'structure',      priority: 'low',
+      title: 'Add Education Section',
+      description: 'Include your educational background with degree, institution, graduation year, and relevant coursework or honors.',
+      actionable: true,
+      autoFixAvailable: false,
+    });
+  }
+  
+  // Content length check
   if (contentAnalysis.wordCount < 200) {
     suggestions.push({
       id: (suggestionId++).toString(),
@@ -387,21 +516,6 @@ function generateSuggestions(
       autoFixAvailable: false,
     });
   }
-  
-  // Section completeness suggestions
-  Object.entries(contentAnalysis.sectionCompleteness).forEach(([section, complete]) => {
-    if (!complete) {
-      suggestions.push({
-        id: (suggestionId++).toString(),
-        type: 'structure',
-        priority: section === 'personalInfo' ? 'high' : 'medium',
-        title: `Complete ${section.charAt(0).toUpperCase() + section.slice(1)} Section`,
-        description: `The ${section} section needs more information to be ATS-compatible.`,
-        actionable: true,
-        autoFixAvailable: false,
-      });
-    }
-  });
   
   return suggestions.sort((a, b) => {
     const priorityOrder = { high: 3, medium: 2, low: 1 };

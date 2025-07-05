@@ -5,13 +5,15 @@
 
 import { useState } from 'react';
 import { CVData, PersonalInfo, Experience } from '../../types';
+import CVClearActions from './CVClearActions';
 
 interface CVFormProps {
   cvData: CVData;
   onChange: (data: Partial<CVData>) => void;
+  onDataRefresh?: () => void;
 }
 
-export default function CVForm({ cvData, onChange }: CVFormProps) {
+export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps) {
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [newSkill, setNewSkill] = useState('');
 
@@ -23,8 +25,7 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
     { id: 'certifications', name: 'Certifications', icon: '🏆' },
     { id: 'languages', name: 'Languages', icon: '🌍' },
   ];
-
-  const handlePersonalInfoChange = (field: keyof PersonalInfo, value: string) => {
+  const handlePersonalInfoChange = (field: keyof PersonalInfo, value: string | boolean) => {
     onChange({
       personalInfo: {
         ...cvData.personalInfo,
@@ -95,143 +96,235 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
     onChange({ skills: newSkills });
   };
 
+  // Education handlers
+  const handleEducationChange = (index: number, field: keyof any, value: any) => {
+    const newEducation = [...cvData.education];
+    newEducation[index] = {
+      ...newEducation[index],
+      [field]: value,
+    };
+    onChange({ education: newEducation });
+  };
+
+  const addEducation = () => {
+    const newEducation = {
+      id: crypto.randomUUID(),
+      degree: '',
+      institution: '',
+      location: '',
+      startDate: '',
+      endDate: '',
+      current: false,
+      gpa: '',
+      description: '',
+    };
+    onChange({ education: [...cvData.education, newEducation] });
+  };
+
+  const removeEducation = (index: number) => {
+    const newEducation = cvData.education.filter((_, i) => i !== index);
+    onChange({ education: newEducation });
+  };
+
+  // Certification handlers
+  const handleCertificationChange = (index: number, field: keyof any, value: any) => {
+    const newCertifications = [...cvData.certifications];
+    newCertifications[index] = {
+      ...newCertifications[index],
+      [field]: value,
+    };
+    onChange({ certifications: newCertifications });
+  };
+
+  const addCertification = () => {
+    const newCertification = {
+      id: crypto.randomUUID(),
+      name: '',
+      issuer: '',
+      date: '',
+      expiryDate: '',
+      url: '',
+    };
+    onChange({ certifications: [...cvData.certifications, newCertification] });
+  };
+
+  const removeCertification = (index: number) => {
+    const newCertifications = cvData.certifications.filter((_, i) => i !== index);
+    onChange({ certifications: newCertifications });
+  };
+
+  // Language handlers
+  const handleLanguageChange = (index: number, field: keyof any, value: any) => {
+    const newLanguages = [...cvData.languages];
+    newLanguages[index] = {
+      ...newLanguages[index],
+      [field]: value,
+    };
+    onChange({ languages: newLanguages });
+  };
+
+  const addLanguage = () => {
+    const newLanguage = {
+      id: crypto.randomUUID(),
+      name: '',
+      proficiency: 'Basic' as const,
+    };
+    onChange({ languages: [...cvData.languages, newLanguage] });
+  };
+
+  const removeLanguage = (index: number) => {
+    const newLanguages = cvData.languages.filter((_, i) => i !== index);
+    onChange({ languages: newLanguages });
+  };
+
   const renderPersonalInfo = () => (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Personal Information</h2>
+      <h2 className="text-xl font-semibold text-gray-900 mb-4">Personal Information</h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Full Name *
           </label>
           <input
             type="text"
             value={cvData.personalInfo.name}
             onChange={(e) => handlePersonalInfoChange('name', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="Enter your full name"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Email Address *
           </label>
           <input
             type="email"
             value={cvData.personalInfo.email}
             onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="your.email@example.com"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Phone Number
           </label>
           <input
             type="tel"
             value={cvData.personalInfo.phone}
             onChange={(e) => handlePersonalInfoChange('phone', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
-            placeholder="e.g., +44 7700 900123, +1 555-123-4567"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
+            placeholder="e.g., +44 7700 900123"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Location
           </label>
           <input
             type="text"
             value={cvData.personalInfo.location}
             onChange={(e) => handlePersonalInfoChange('location', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="e.g., London, UK | Berlin, Germany | Remote"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Website
           </label>
           <input
             type="url"
             value={cvData.personalInfo.website}
             onChange={(e) => handlePersonalInfoChange('website', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="https://yourwebsite.com"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             LinkedIn Profile
           </label>
           <input
             type="url"
             value={cvData.personalInfo.linkedin}
             onChange={(e) => handlePersonalInfoChange('linkedin', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="https://linkedin.com/in/yourprofile"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             GitHub Profile
           </label>
           <input
             type="url"
             value={cvData.personalInfo.github}
             onChange={(e) => handlePersonalInfoChange('github', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="https://github.com/yourhandle"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
             Portfolio URL
           </label>
           <input
             type="url"
             value={cvData.personalInfo.portfolio}
             onChange={(e) => handlePersonalInfoChange('portfolio', e.target.value)}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white transition-colors"
+            className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
             placeholder="https://portfolio.yourname.com"
           />
         </div>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Professional Summary
         </label>
         <textarea
           value={cvData.personalInfo.summary}
           onChange={(e) => handlePersonalInfoChange('summary', e.target.value)}
           rows={4}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors text-black"
           placeholder="A brief professional summary highlighting your key skills and experience..."
         />
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      </div>      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Salary Expectation (Optional)
         </label>
         <input
           type="text"
           value={cvData.personalInfo.salaryExpectation}
           onChange={(e) => handlePersonalInfoChange('salaryExpectation', e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-          placeholder="$80,000 - $100,000"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+          placeholder="Amount in your local currency (e.g., £50,000)"
         />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-          This field is private and won't be shown on your CV by default
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-gray-500">
+            {cvData.personalInfo.showSalaryInCV ? 'Salary will be shown on your CV' : 'Salary is private and won\'t be shown on your CV'}
+          </p>
+          <button
+            type="button"
+            onClick={() => handlePersonalInfoChange('showSalaryInCV', !cvData.personalInfo.showSalaryInCV)}
+            className={`px-3 py-1 text-xs rounded-md transition-colors ${
+              cvData.personalInfo.showSalaryInCV
+                ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            {cvData.personalInfo.showSalaryInCV ? '👁️ Visible' : '🔒 Hidden'}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -239,7 +332,7 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
   const renderExperience = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Work Experience</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Work Experience</h2>
         <button
           onClick={addExperience}
           className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center gap-2"
@@ -252,23 +345,23 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
       </div>
 
       {cvData.experience.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
           <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0V6a2 2 0 012 2v6a2 2 0 01-2 2H8a2 2 0 01-2-2V8a2 2 0 012-2V6" />
           </svg>
-          <p className="text-gray-500 dark:text-gray-400">No work experience added yet</p>
+          <p className="text-gray-500">No work experience added yet</p>
         </div>
       ) : (
         <div className="space-y-6">
           {cvData.experience.map((exp, index) => (
-            <div key={exp.id} className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-6">
+            <div key={exp.id} className="bg-white border border-gray-200 rounded-lg p-6">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                <h3 className="text-lg font-medium text-gray-900">
                   Experience #{index + 1}
                 </h3>
                 <button
                   onClick={() => removeExperience(index)}
-                  className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                  className="text-red-600 hover:text-red-700"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1-1V4m7 3H4" />
@@ -278,59 +371,59 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Position *
                   </label>
                   <input
                     type="text"
                     value={exp.position}
                     onChange={(e) => handleExperienceChange(index, 'position', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Software Engineer"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Company *
                   </label>
                   <input
                     type="text"
                     value={exp.company}
                     onChange={(e) => handleExperienceChange(index, 'company', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="Tech Company Inc."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Location
                   </label>
                   <input
                     type="text"
                     value={exp.location}
                     onChange={(e) => handleExperienceChange(index, 'location', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
                     placeholder="San Francisco, CA"
                   />
                 </div>
 
                 <div className="flex items-center gap-4">
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       Start Date
                     </label>
                     <input
                       type="month"
                       value={exp.startDate}
                       onChange={(e) => handleExperienceChange(index, 'startDate', e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
                     />
                   </div>
 
                   <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
                       End Date
                     </label>
                     <input
@@ -338,7 +431,7 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
                       value={exp.endDate}
                       onChange={(e) => handleExperienceChange(index, 'endDate', e.target.value)}
                       disabled={exp.current}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white disabled:bg-gray-100 dark:disabled:bg-gray-600"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 "
                     />
                   </div>
                 </div>
@@ -352,33 +445,33 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
                     onChange={(e) => handleExperienceChange(index, 'current', e.target.checked)}
                     className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
                   />
-                  <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                  <span className="ml-2 text-sm text-gray-700">
                     I currently work here
                   </span>
                 </label>
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Description
                 </label>
                 <textarea
                   value={exp.description}
                   onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
                   placeholder="Brief description of your role and responsibilities..."
                 />
               </div>
 
               <div>
                 <div className="flex items-center justify-between mb-2">
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                  <label className="block text-sm font-medium text-gray-700">
                     Key Achievements
                   </label>
                   <button
                     onClick={() => addAchievement(index)}
-                    className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 text-sm flex items-center gap-1"
+                    className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -394,12 +487,12 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
                         type="text"
                         value={achievement}
                         onChange={(e) => updateAchievement(index, achievementIndex, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
                         placeholder="Increased sales by 25% through improved customer engagement"
                       />
                       <button
                         onClick={() => removeAchievement(index, achievementIndex)}
-                        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                        className="text-red-600 hover:text-red-700"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -433,7 +526,7 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
 
     return (
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Skills</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Skills</h2>
         
         <div className="flex gap-2">
           <input
@@ -441,7 +534,7 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
             onKeyPress={handleKeyPress}
-            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
             placeholder="Add a skill (e.g., JavaScript, Project Management)"
           />
           <button
@@ -457,12 +550,12 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
             {cvData.skills.map((skill, index) => (
               <div
                 key={index}
-                className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded-full text-sm"
+                className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
               >
                 <span>{skill}</span>
                 <button
                   onClick={() => removeSkill(index)}
-                  className="text-blue-600 hover:text-blue-800 dark:text-blue-300 dark:hover:text-blue-100"
+                  className="text-blue-600 hover:text-blue-800"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -472,17 +565,17 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
             ))}
           </div>
         ) : (
-          <div className="text-center py-8 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="text-center py-8 bg-gray-50 rounded-lg">
             <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
-            <p className="text-gray-500 dark:text-gray-400">No skills added yet</p>
+            <p className="text-gray-500">No skills added yet</p>
           </div>
         )}
 
-        <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">💡 Skill Tips</h3>
-          <ul className="text-sm text-blue-700 dark:text-blue-200 space-y-1">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-900 mb-2">💡 Skill Tips</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
             <li>• Include both technical and soft skills</li>
             <li>• Focus on skills relevant to your target job</li>
             <li>• Consider industry-specific tools and technologies</li>
@@ -493,7 +586,308 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
     );
   };
 
+  const renderEducation = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">Education</h2>
+        <button
+          onClick={addEducation}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Education
+        </button>
+      </div>
 
+      {cvData.education.length > 0 ? (
+        <div className="space-y-6">
+          {cvData.education.map((edu, index) => (
+            <div key={edu.id} className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Education #{index + 1}</h3>
+                <button
+                  onClick={() => removeEducation(index)}
+                  className="text-red-600 hover:text-red-800 p-1"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Degree/Qualification *</label>
+                  <input
+                    type="text"
+                    value={edu.degree}
+                    onChange={(e) => handleEducationChange(index, 'degree', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., Bachelor of Science in Computer Science"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Institution *</label>
+                  <input
+                    type="text"
+                    value={edu.institution}
+                    onChange={(e) => handleEducationChange(index, 'institution', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., Oxford University, University of London, etc."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Location</label>
+                  <input
+                    type="text"
+                    value={edu.location}
+                    onChange={(e) => handleEducationChange(index, 'location', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., London, UK"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">GPA (Optional)</label>
+                  <input
+                    type="text"
+                    value={edu.gpa}
+                    onChange={(e) => handleEducationChange(index, 'gpa', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., 3.8/4.0"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                  <input
+                    type="month"
+                    value={edu.startDate}
+                    onChange={(e) => handleEducationChange(index, 'startDate', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                  <div className="space-y-2">
+                    <input
+                      type="month"
+                      value={edu.endDate}
+                      onChange={(e) => handleEducationChange(index, 'endDate', e.target.value)}
+                      disabled={edu.current}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                    />
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={edu.current}
+                        onChange={(e) => handleEducationChange(index, 'current', e.target.checked)}
+                        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">Currently studying</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Description (Optional)</label>
+                <textarea
+                  value={edu.description}
+                  onChange={(e) => handleEducationChange(index, 'description', e.target.value)}
+                  rows={3}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  placeholder="Relevant coursework, honors, extracurricular activities..."
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C19.832 18.477 18.246 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+          </svg>
+          <p className="text-gray-500">No education added yet</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderCertifications = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">Certifications</h2>
+        <button
+          onClick={addCertification}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Certification
+        </button>
+      </div>
+
+      {cvData.certifications.length > 0 ? (
+        <div className="space-y-4">
+          {cvData.certifications.map((cert, index) => (
+            <div key={cert.id} className="bg-white border border-gray-200 rounded-lg p-6">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Certification #{index + 1}</h3>
+                <button
+                  onClick={() => removeCertification(index)}
+                  className="text-red-600 hover:text-red-800 p-1"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Certification Name *</label>
+                  <input
+                    type="text"
+                    value={cert.name}
+                    onChange={(e) => handleCertificationChange(index, 'name', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., AWS Certified Solutions Architect"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Issuing Organization *</label>
+                  <input
+                    type="text"
+                    value={cert.issuer}
+                    onChange={(e) => handleCertificationChange(index, 'issuer', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., Amazon Web Services"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Issue Date</label>
+                  <input
+                    type="month"
+                    value={cert.date}
+                    onChange={(e) => handleCertificationChange(index, 'date', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Expiry Date (Optional)</label>
+                  <input
+                    type="month"
+                    value={cert.expiryDate}
+                    onChange={(e) => handleCertificationChange(index, 'expiryDate', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Verification URL (Optional)</label>
+                <input
+                  type="url"
+                  value={cert.url}
+                  onChange={(e) => handleCertificationChange(index, 'url', e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  placeholder="https://verify.example.com/123456"
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+          </svg>
+          <p className="text-gray-500">No certifications added yet</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const renderLanguages = () => (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-semibold text-gray-900">Languages</h2>
+        <button
+          onClick={addLanguage}
+          className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add Language
+        </button>
+      </div>
+
+      {cvData.languages.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {cvData.languages.map((lang, index) => (
+            <div key={lang.id} className="bg-white border border-gray-200 rounded-lg p-4">
+              <div className="flex justify-between items-start mb-4">
+                <h3 className="text-lg font-medium text-gray-900">Language #{index + 1}</h3>
+                <button
+                  onClick={() => removeLanguage(index)}
+                  className="text-red-600 hover:text-red-800 p-1"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Language *</label>
+                  <input
+                    type="text"
+                    value={lang.name}
+                    onChange={(e) => handleLanguageChange(index, 'name', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                    placeholder="e.g., Spanish, Mandarin, French"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Proficiency Level *</label>
+                  <select
+                    value={lang.proficiency}
+                    onChange={(e) => handleLanguageChange(index, 'proficiency', e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                  >
+                    <option value="Basic">Basic</option>
+                    <option value="Conversational">Conversational</option>
+                    <option value="Fluent">Fluent</option>
+                    <option value="Native">Native</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-8 bg-gray-50 rounded-lg">
+          <svg className="w-12 h-12 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129" />
+          </svg>
+          <p className="text-gray-500">No languages added yet</p>
+        </div>
+      )}
+    </div>
+  );
 
   const renderContent = () => {
     switch (activeSection) {
@@ -502,13 +896,13 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
       case 'experience':
         return renderExperience();
       case 'education':
-        return <div className="text-center py-8 text-gray-500">Education section coming soon...</div>;
+        return renderEducation();
       case 'skills':
         return renderSkills();
       case 'certifications':
-        return <div className="text-center py-8 text-gray-500">Certifications section coming soon...</div>;
+        return renderCertifications();
       case 'languages':
-        return <div className="text-center py-8 text-gray-500">Languages section coming soon...</div>;
+        return renderLanguages();
       default:
         return renderPersonalInfo();
     }
@@ -525,8 +919,8 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
               onClick={() => setActiveSection(section.id)}
               className={`w-full flex items-center gap-3 px-3 py-2 text-left rounded-lg transition-colors ${
                 activeSection === section.id
-                  ? 'bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300'
-                  : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
               <span className="text-lg">{section.icon}</span>
@@ -536,28 +930,32 @@ export default function CVForm({ cvData, onChange }: CVFormProps) {
         </nav>
 
         {/* Progress Indicator */}
-        <div className="mt-8 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-2">Completion Progress</h3>
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Completion Progress</h3>
           <div className="space-y-2">
             <div className="flex justify-between text-xs">
-              <span className="text-gray-600 dark:text-gray-400">Personal Info</span>
+              <span className="text-gray-600">Personal Info</span>
               <span className={cvData.personalInfo.name && cvData.personalInfo.email ? 'text-green-600' : 'text-gray-400'}>
                 {cvData.personalInfo.name && cvData.personalInfo.email ? '✓' : '○'}
               </span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-600 dark:text-gray-400">Experience</span>
+              <span className="text-gray-600">Experience</span>
               <span className={cvData.experience.length > 0 ? 'text-green-600' : 'text-gray-400'}>
                 {cvData.experience.length > 0 ? '✓' : '○'}
               </span>
             </div>
             <div className="flex justify-between text-xs">
-              <span className="text-gray-600 dark:text-gray-400">Skills</span>
+              <span className="text-gray-600">Skills</span>
               <span className={cvData.skills.length > 0 ? 'text-green-600' : 'text-gray-400'}>
                 {cvData.skills.length > 0 ? '✓' : '○'}
-              </span>
-            </div>
+              </span>            </div>
           </div>
+        </div>
+
+        {/* Clear Actions */}
+        <div className="mt-6">
+          <CVClearActions onDataCleared={() => onDataRefresh?.()} />
         </div>
       </div>
 

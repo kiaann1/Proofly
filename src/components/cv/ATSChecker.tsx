@@ -1,11 +1,11 @@
-/**
- * ATS Checker Component - Analyze CV for ATS compatibility and optimisation
- */
+
 'use client';
 
 import { useState, useEffect } from 'react';
 import { CVData, ATSAnalysis, ATSSuggestion, JobDescription } from '../../types';
 import { analyzeATS } from '../../lib/atsAnalyzer';
+import { extractTextFromFile, parseCV } from '../../lib/cvParser';
+import { cvStorage } from '../../lib/storage';
 
 interface ATSCheckerProps {
   cvData: CVData;
@@ -21,6 +21,26 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
   const [activeTab, setActiveTab] = useState<'upload' | 'jobdesc' | 'analysis' | 'suggestions'>('upload');
   const [showUploadSuccess, setShowUploadSuccess] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['high'])); // High priority expanded by default
+  const [isClient, setIsClient] = useState(false);
+
+  // Client-side hydration fix
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Load job description from storage on mount
+  useEffect(() => {
+    const savedJobDescription = cvStorage.getJobDescription();
+    if (savedJobDescription) {
+      setJobDescription(savedJobDescription);
+    }
+  }, []);
+
+  // Save job description to storage when it changes
+  const handleJobDescriptionChange = (value: string) => {
+    setJobDescription(value);
+    cvStorage.saveJobDescription(value);
+  };
 
   // Auto-analyze when CV data changes
   useEffect(() => {
@@ -28,7 +48,6 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       handleAnalyze();
     }
   }, [cvData]);
-
   // Handle CV file upload and parsing
   const handleCVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -36,10 +55,25 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
 
     setIsUploading(true);
     try {
-      const text = await file.text();
-      // Basic CV parsing - extract common patterns
-      const parsedData = parseBasicCV(text);
-      onChange(parsedData);
+      // Extract text using improved parser
+      const text = await extractTextFromFile(file);
+      
+      // Parse CV data using enhanced parsing
+      const parsedData = parseCV(text, cvData);
+      
+      // Merge parsed data with existing CV data
+      const updatedCVData: Partial<CVData> = {
+        personalInfo: {
+          ...cvData.personalInfo,
+          ...parsedData.personalInfo,
+          // Preserve showSalaryInCV setting
+          showSalaryInCV: cvData.personalInfo.showSalaryInCV
+        },
+        skills: parsedData.skills.length > 0 ? parsedData.skills : cvData.skills,
+        experience: parsedData.experience.length > 0 ? parsedData.experience : cvData.experience
+      };
+      
+      onChange(updatedCVData);
       setShowUploadSuccess(true);
       
       // Show success message and suggest going to form editor
@@ -50,68 +84,9 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       setActiveTab('jobdesc');
     } catch (error) {
       console.error('Error parsing CV:', error);
-      alert('Failed to parse CV. Please ensure it\'s a text-based file (PDF with text, TXT, etc.)');
-    } finally {
-      setIsUploading(false);
+      alert(error instanceof Error ? error.message : 'Failed to parse CV. Please ensure it\'s a valid PDF or text file.');
+    } finally {      setIsUploading(false);
     }
-  };
-
-  // Basic CV parsing function
-  const parseBasicCV = (text: string): Partial<CVData> => {
-    const lines = text.split('\n').map(line => line.trim());
-    const result: Partial<CVData> = {
-      personalInfo: { ...cvData.personalInfo },
-      experience: [],
-      skills: []
-    };
-
-    // Extract email
-    const emailMatch = text.match(/([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/);
-    if (emailMatch) {
-      result.personalInfo!.email = emailMatch[1];
-    }
-
-    // Extract phone
-    const phoneMatch = text.match(/(\+?[\d\s\-\(\)]{10,})/);
-    if (phoneMatch) {
-      result.personalInfo!.phone = phoneMatch[1].trim();
-    }
-
-    // Extract name (assume first non-empty line that's not email/phone)
-    for (const line of lines) {
-      if (line && !line.includes('@') && !line.match(/[\d\-\(\)]{7,}/) && line.length > 2) {
-        result.personalInfo!.name = line;
-        break;
-      }
-    }
-
-    // Extract skills (look for common skill sections)
-    const skillKeywords = ['skills', 'technologies', 'technical skills', 'competencies'];
-    let skillsSection = false;
-    const skills: string[] = [];
-    
-    for (const line of lines) {
-      const lowerLine = line.toLowerCase();
-      if (skillKeywords.some(keyword => lowerLine.includes(keyword))) {
-        skillsSection = true;
-        continue;
-      }
-      if (skillsSection && line) {
-        // Stop at next section
-        if (lowerLine.includes('experience') || lowerLine.includes('education') || lowerLine.includes('work')) {
-          break;
-        }
-        // Extract skills from line
-        const lineSkills = line.split(/[,;•·]/).map(s => s.trim()).filter(s => s && s.length > 1);
-        skills.push(...lineSkills);
-      }
-    }
-
-    if (skills.length > 0) {
-      result.skills = skills.slice(0, 20); // Limit to 20 skills
-    }
-
-    return result;
   };
 
   const handleAnalyze = async () => {
@@ -140,23 +115,44 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     if (score >= 60) return 'stroke-yellow-500';
     return 'stroke-red-500';
   };
-
   const applySuggestion = (suggestion: ATSSuggestion) => {
+    console.log('Applying suggestion:', suggestion);
+    
     // Auto-apply certain suggestions
     switch (suggestion.type) {
       case 'keyword':
         // Add missing keywords to skills if they're skill-related
-        if (suggestion.title.includes('Add skill') && suggestion.description.includes('keyword')) {
-          const keyword = suggestion.description.match(/"([^"]+)"/)?.[1];
+        if (suggestion.title.includes('Add skill') || suggestion.title.includes('keyword')) {
+          const keywordMatch = suggestion.description.match(/"([^"]+)"/);
+          const keyword = keywordMatch?.[1];
+          
           if (keyword && !cvData.skills.includes(keyword)) {
             onChange({ skills: [...cvData.skills, keyword] });
+            alert(`Added "${keyword}" to your skills!`);
+            return;
+          }
+        }
+        
+        // Handle missing keywords by adding them to skills
+        if (suggestion.title.includes('Missing') && suggestion.description.includes('keyword')) {
+          const missingKeywords = suggestion.description.match(/keywords?:?\s*([^.]+)/i)?.[1];
+          if (missingKeywords) {
+            const keywords = missingKeywords.split(/[,\s]+/)
+              .map(k => k.trim().replace(/['"]/g, ''))
+              .filter(k => k.length > 1 && !cvData.skills.includes(k));
+            
+            if (keywords.length > 0) {
+              onChange({ skills: [...cvData.skills, ...keywords.slice(0, 3)] }); // Add up to 3 keywords
+              alert(`Added ${keywords.slice(0, 3).join(', ')} to your skills!`);
+              return;
+            }
           }
         }
         break;
+        
       case 'format':
         // Apply formatting improvements
-        if (suggestion.title.includes('Phone format')) {
-          // Auto-format phone number
+        if (suggestion.title.includes('Phone format') || suggestion.title.includes('phone number')) {
           const phone = cvData.personalInfo.phone.replace(/\D/g, '');
           if (phone.length === 10) {
             const formatted = `(${phone.slice(0, 3)}) ${phone.slice(3, 6)}-${phone.slice(6)}`;
@@ -166,24 +162,85 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                 phone: formatted,
               },
             });
+            alert('Phone number formatted successfully!');
+            return;
+          } else if (phone.length === 11 && phone.startsWith('1')) {
+            const formatted = `+1 (${phone.slice(1, 4)}) ${phone.slice(4, 7)}-${phone.slice(7)}`;
+            onChange({
+              personalInfo: {
+                ...cvData.personalInfo,
+                phone: formatted,
+              },
+            });
+            alert('Phone number formatted successfully!');
+            return;
           }
+        }
+        
+        // Fix email format
+        if (suggestion.title.includes('Email format') && cvData.personalInfo.email) {
+          const email = cvData.personalInfo.email.toLowerCase().trim();
+          onChange({
+            personalInfo: {
+              ...cvData.personalInfo,
+              email: email,
+            },
+          });
+          alert('Email format improved!');
+          return;
+        }
+        break;
+        
+      case 'content':
+        // Handle content suggestions
+        if (suggestion.title.includes('Professional summary') && !cvData.personalInfo.summary) {
+          const defaultSummary = `Experienced ${cvData.experience[0]?.position || 'professional'} with expertise in ${cvData.skills.slice(0, 3).join(', ')}. Proven track record of delivering results and contributing to team success.`;
+          onChange({
+            personalInfo: {
+              ...cvData.personalInfo,
+              summary: defaultSummary,
+            },
+          });
+          alert('Added a professional summary! You can edit it in the Personal Information section.');
+          return;
+        }
+        
+        // Add missing experience details
+        if (suggestion.title.includes('experience') && suggestion.title.includes('details')) {
+          // This would require more sophisticated handling
+          alert('Please add more details to your work experience manually in the form.');
+          return;
+        }
+        break;
+        
+      case 'structure':
+        // Handle structural improvements
+        if (suggestion.title.includes('Work experience') && cvData.experience.length === 0) {
+          alert('Please add your work experience in the Experience section of the form.');
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
+          return;
         }
         break;
     }
+    
+    // Fallback for unhandled suggestions
+    alert(`This suggestion requires manual action: ${suggestion.description}`);
   };
 
   const renderUploadTab = () => (
     <div className="space-y-6 p-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Upload Your CV for ATS Analysis
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-gray-600 mb-6">
           Upload your existing CV to automatically extract information and get ATS optimisation recommendations.
         </p>
       </div>
 
-      <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg p-8 text-center">
+      <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
         <div className="space-y-4">
           <div className="flex justify-center">
             <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -191,10 +248,10 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             </svg>
           </div>
           <div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
               Upload Your CV
             </h3>
-            <p className="text-gray-600 dark:text-gray-400">
+            <p className="text-gray-600">
               Supports PDF, TXT, and other text-based formats
             </p>
           </div>
@@ -236,7 +293,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         </div>
       </div>
 
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
         <div className="flex">
           <div className="flex-shrink-0">
             <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
@@ -244,7 +301,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             </svg>
           </div>
           <div className="ml-3">
-            <p className="text-sm text-blue-700 dark:text-blue-300">
+            <p className="text-sm text-blue-700">
               <strong>Privacy Note:</strong> Your CV is processed locally in your browser. No data is sent to external servers.
             </p>
           </div>
@@ -253,12 +310,12 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
 
       {/* Skip upload option */}
       <div className="text-center">
-        <p className="text-gray-500 dark:text-gray-400 mb-4">
+        <p className="text-gray-500 mb-4">
           Already have your information in the CV builder?
         </p>
         <button
           onClick={() => setActiveTab('jobdesc')}
-          className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
+          className="text-blue-600 hover:text-blue-700 font-medium"
         >
           Skip and use existing data →
         </button>
@@ -269,26 +326,25 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
   const renderJobDescriptionTab = () => (
     <div className="space-y-6 p-5">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
+        <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Job Description Analysis
         </h2>
-        <p className="text-gray-600 dark:text-gray-400 mb-6">
+        <p className="text-gray-600 mb-6">
           Paste a job description to get targeted ATS optimisation recommendations.
         </p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+        <label className="block text-sm font-medium text-gray-700 mb-2">
           Job Description
-        </label>
-        <textarea
+        </label>        <textarea
           value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
+          onChange={(e) => handleJobDescriptionChange(e.target.value)}
           rows={12}
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
           placeholder="Paste the full job description here. Include requirements, qualifications, responsibilities, and preferred skills for the most accurate analysis..."
         />
-        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+        <p className="text-xs text-gray-500 mt-1">
           The more detailed the job description, the better the ATS analysis will be.
         </p>
       </div>
@@ -315,16 +371,16 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         </button>
         
         {jobDescription && (
-          <div className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="text-sm text-gray-500">
             {jobDescription.split(' ').length} words • {jobDescription.length} characters
           </div>
         )}
       </div>
 
       {!jobDescription && (
-        <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-700 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">💡 Pro Tips</h3>
-          <ul className="text-sm text-blue-700 dark:text-blue-200 space-y-1">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-900 mb-2">💡 Pro Tips</h3>
+          <ul className="text-sm text-blue-700 space-y-1">
             <li>• Copy the entire job posting, not just the title</li>
             <li>• Include required and preferred qualifications</li>
             <li>• Don't edit or summarize - paste the full text</li>
@@ -342,8 +398,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2v-6a2 2 0 00-2-2h-2a2 2 0 00-2 2z" />
           </svg>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">No Analysis Yet</p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">
+          <p className="text-lg text-gray-600 mb-2">No Analysis Yet</p>
+          <p className="text-sm text-gray-500">
             Click "Analyze CV" to see your ATS compatibility score
           </p>
         </div>
@@ -353,9 +409,9 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     return (
       <div className="space-y-6 p5">
         {/* Overall Score */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-xl font-semibold text-gray-900">
               ATS Compatibility Score
             </h2>
             <div className="relative w-20 h-20">
@@ -367,7 +423,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   stroke="currentColor"
                   strokeWidth="8"
                   fill="transparent"
-                  className="text-gray-200 dark:text-gray-700"
+                  className="text-gray-200"
                 />
                 <circle
                   cx="50"
@@ -392,7 +448,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             {analysis.score >= 80 ? 'Excellent' : analysis.score >= 60 ? 'Good' : 'Needs Improvement'}
           </div>
           
-          <p className="text-gray-600 dark:text-gray-400 mt-3">
+          <p className="text-gray-600 mt-3">
             {analysis.overallFeedback}
           </p>
         </div>
@@ -400,22 +456,22 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         {/* Detailed Analysis */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Keyword Analysis */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-blue-100 dark:bg-blue-900 rounded-lg">
-                <svg className="w-5 h-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-blue-100 rounded-lg">
+                <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Keywords</h3>
+                <h3 className="font-semibold text-gray-900">Keywords</h3>
                 <div className="text-2xl font-bold text-blue-600">{analysis.keywordMatch.score}/100</div>
               </div>
             </div>
             
             <div className="space-y-3">
               <div>
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="text-sm font-medium text-gray-700">
                   Matched Keywords
                 </div>
                 <div className="text-lg font-semibold text-green-600">
@@ -423,7 +479,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                 </div>
               </div>
               <div>
-                <div className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                <div className="text-sm font-medium text-gray-700">
                   Missing Keywords
                 </div>
                 <div className="text-lg font-semibold text-red-600">
@@ -434,15 +490,15 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           </div>
 
           {/* Format Analysis */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-green-100 dark:bg-green-900 rounded-lg">
-                <svg className="w-5 h-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-green-100 rounded-lg">
+                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Format</h3>
+                <h3 className="font-semibold text-gray-900">Format</h3>
                 <div className="text-2xl font-bold text-green-600">{analysis.formatAnalysis.score}/100</div>
               </div>
             </div>
@@ -458,7 +514,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 )}
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600">
                   {analysis.formatAnalysis.hasGoodStructure ? 'Good Structure' : 'Structure Issues'}
                 </span>
               </div>
@@ -473,7 +529,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 )}
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600">
                   {!analysis.formatAnalysis.hasProblematicElements ? 'ATS-Friendly' : 'Format Issues'}
                 </span>
               </div>
@@ -481,15 +537,15 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           </div>
 
           {/* Content Analysis */}
-          <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
+          <div className="bg-white rounded-lg border border-gray-200 p-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-                <svg className="w-5 h-5 text-purple-600 dark:text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="p-2 bg-purple-100 rounded-lg">
+                <svg className="w-5 h-5 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 dark:text-white">Content</h3>
+                <h3 className="font-semibold text-gray-900">Content</h3>
                 <div className="text-2xl font-bold text-purple-600">{analysis.contentAnalysis.score}/100</div>
               </div>
             </div>
@@ -505,7 +561,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 )}
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600">
                   {analysis.contentAnalysis.hasMeasurableResults ? 'Has Metrics' : 'Add Numbers'}
                 </span>
               </div>
@@ -520,7 +576,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 )}
-                <span className="text-sm text-gray-600 dark:text-gray-400">
+                <span className="text-sm text-gray-600">
                   {analysis.contentAnalysis.hasActionVerbs ? 'Strong Verbs' : 'Weak Language'}
                 </span>
               </div>
@@ -532,8 +588,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         {jobDescription && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Matched Keywords */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5 text-green-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
@@ -545,22 +601,22 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   {analysis.keywordMatch.matchedKeywords.map((keyword, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-sm"
+                      className="px-2 py-1 bg-green-100 text-green-800 rounded text-sm"
                     >
                       {keyword}
                     </span>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <p className="text-gray-500 text-sm">
                   No keywords found matching the job description
                 </p>
               )}
             </div>
 
             {/* Missing Keywords */}
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-6">
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <div className="bg-white rounded-lg border border-gray-200 p-6">
+              <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <svg className="w-5 h-5 text-red-500" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
@@ -572,19 +628,19 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   {analysis.keywordMatch.missingKeywords.slice(0, 10).map((keyword, index) => (
                     <span
                       key={index}
-                      className="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 rounded text-sm"
+                      className="px-2 py-1 bg-red-100 text-red-800 rounded text-sm"
                     >
                       {keyword}
                     </span>
                   ))}
                   {analysis.keywordMatch.missingKeywords.length > 10 && (
-                    <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded text-sm">
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 rounded text-sm">
                       +{analysis.keywordMatch.missingKeywords.length - 10} more
                     </span>
                   )}
                 </div>
               ) : (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                <p className="text-gray-500 text-sm">
                   Great! Your CV includes the key keywords from the job description
                 </p>
               )}
@@ -594,23 +650,24 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       </div>
     );
   };
-
   const renderSuggestionsTab = () => {
+    // Prevent hydration errors by only rendering on client
+    if (!isClient) {
+      return <div className="animate-pulse bg-gray-200 h-64 rounded"></div>;
+    }
+
     if (!analysis || analysis.suggestions.length === 0) {
       return (
         <div className="text-center py-12">
           <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-2">No Suggestions Available</p>
-          <p className="text-sm text-gray-500 dark:text-gray-500">
+          <p className="text-lg text-gray-600 mb-2">No Suggestions Available</p>
+          <p className="text-sm text-gray-500">
             Run an analysis first to get personalised recommendations
           </p>
-        </div>
-      );
+        </div>      );
     }
-
-    const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['high'])); // High priority expanded by default
 
     const toggleSection = (priority: string) => {
       const newExpanded = new Set(expandedSections);
@@ -633,10 +690,10 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     return (
       <div className="space-y-6 p-5">
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
             Optimisation Suggestions
           </h2>
-          <p className="text-gray-600 dark:text-gray-400">
+          <p className="text-gray-600">
             Actionable recommendations to improve your ATS compatibility score
           </p>
         </div>
@@ -650,28 +707,28 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               color: 'red', 
               label: 'High Priority', 
               icon: '🔥',
-              bgColor: 'bg-red-50 dark:bg-red-900/20',
-              borderColor: 'border-red-200 dark:border-red-800',
-              textColor: 'text-red-700 dark:text-red-300',
-              badgeColor: 'bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200'
+              bgColor: 'bg-red-50',
+              borderColor: 'border-red-200',
+              textColor: 'text-red-700',
+              badgeColor: 'bg-red-100 text-red-800'
             },
             medium: { 
               color: 'yellow', 
               label: 'Medium Priority', 
               icon: '⚡',
-              bgColor: 'bg-yellow-50 dark:bg-yellow-900/20',
-              borderColor: 'border-yellow-200 dark:border-yellow-800',
-              textColor: 'text-yellow-700 dark:text-yellow-300',
-              badgeColor: 'bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200'
+              bgColor: 'bg-yellow-50',
+              borderColor: 'border-yellow-200',
+              textColor: 'text-yellow-700',
+              badgeColor: 'bg-yellow-100 text-yellow-800'
             },
             low: { 
               color: 'blue', 
               label: 'Low Priority', 
               icon: '💡',
-              bgColor: 'bg-blue-50 dark:bg-blue-900/20',
-              borderColor: 'border-blue-200 dark:border-blue-800',
-              textColor: 'text-blue-700 dark:text-blue-300',
-              badgeColor: 'bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200'
+              bgColor: 'bg-blue-50',
+              borderColor: 'border-blue-200',
+              textColor: 'text-blue-700',
+              badgeColor: 'bg-blue-100 text-blue-800'
             },
           };
 
@@ -682,7 +739,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             <div key={priority} className={`rounded-xl border ${config.borderColor} ${config.bgColor} overflow-hidden transition-all duration-200`}>
               <button
                 onClick={() => toggleSection(priority)}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/50 dark:hover:bg-gray-800/50 transition-colors"
+                className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
               >
                 <div className="flex items-center gap-3">
                   <span className="text-xl">{config.icon}</span>
@@ -690,7 +747,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                     <h3 className={`text-lg font-semibold ${config.textColor}`}>
                       {config.label}
                     </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-gray-500">
                       {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} to review
                     </p>
                   </div>
@@ -712,31 +769,31 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               </button>
 
               {isExpanded && (
-                <div className="px-6 pb-6 space-y-4 bg-white/30 dark:bg-gray-800/30">
+                <div className="px-6 pb-6 space-y-4 bg-white/30">
                   {suggestions.map((suggestion) => (
                     <div
                       key={suggestion.id}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+                      className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 dark:text-white mb-2">
+                          <h4 className="font-medium text-gray-900 mb-2">
                             {suggestion.title}
                           </h4>
-                          <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 leading-relaxed">
+                          <p className="text-sm text-gray-600 mb-3 leading-relaxed">
                             {suggestion.description}
                           </p>
                           <div className="flex items-center gap-2">
                             <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                              suggestion.type === 'keyword' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200' :
-                              suggestion.type === 'format' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200' :
-                              suggestion.type === 'content' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200' :
-                              'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200'
+                              suggestion.type === 'keyword' ? 'bg-blue-100 text-blue-800' :
+                              suggestion.type === 'format' ? 'bg-green-100 text-green-800' :
+                              suggestion.type === 'content' ? 'bg-purple-100 text-purple-800' :
+                              'bg-gray-100 text-gray-800'
                             }`}>
                               {suggestion.type}
                             </span>
                             {suggestion.actionable && (
-                              <span className="px-2 py-1 bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200 rounded-md text-xs font-medium">
+                              <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md text-xs font-medium">
                                 Actionable
                               </span>
                             )}
@@ -764,8 +821,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         })}
         
         {/* Summary Actions */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-xl p-6 mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 mt-8">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
             Quick Actions
           </h3>
           <div className="flex flex-wrap gap-3">
@@ -797,7 +854,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     <div className="space-y-6 py-5 px-4">
       {/* Upload Success Notification */}
       {showUploadSuccess && (
-        <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4">
           <div className="flex items-start">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
@@ -805,10 +862,10 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               </svg>
             </div>
             <div className="ml-3 flex-1">
-              <h3 className="text-sm font-medium text-green-800 dark:text-green-200">
+              <h3 className="text-sm font-medium text-green-800">
                 CV Uploaded Successfully!
               </h3>
-              <div className="mt-2 text-sm text-green-700 dark:text-green-300">
+              <div className="mt-2 text-sm text-green-700">
                 <p>
                   Your CV information has been extracted and populated. We recommend reviewing and editing 
                   your details in the <strong>CV Builder</strong> before running the ATS analysis.
@@ -823,7 +880,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                         onSwitchToForm();
                         setShowUploadSuccess(false);
                       }}
-                      className="bg-green-100 dark:bg-green-800 px-3 py-2 rounded-md text-sm font-medium text-green-800 dark:text-green-200 hover:bg-green-200 dark:hover:bg-green-700 transition-colors"
+                      className="bg-green-100 px-3 py-2 rounded-md text-sm font-medium text-green-800 hover:bg-green-200 transition-colors"
                     >
                       Review & Edit Details
                     </button>
@@ -831,7 +888,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   <button
                     type="button"
                     onClick={() => setShowUploadSuccess(false)}
-                    className="bg-white dark:bg-gray-800 px-3 py-2 rounded-md text-sm font-medium text-green-800 dark:text-green-200 border border-green-300 dark:border-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors"
+                    className="bg-white px-3 py-2 rounded-md text-sm font-medium text-green-800 border border-green-300 hover:bg-green-50 transition-colors"
                   >
                     Continue Here
                   </button>
@@ -843,7 +900,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       )}
 
       {/* Tab Navigation */}
-      <div className="border-b border-gray-200 dark:border-gray-700">
+      <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8">
           {[
             { id: 'upload', name: 'Upload CV', icon: '📤' },
@@ -856,8 +913,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               onClick={() => setActiveTab(tab.id as any)}
               className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
             >
               <span>{tab.icon}</span>

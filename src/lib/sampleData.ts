@@ -11,8 +11,7 @@ export const sampleCVTemplate: CVTemplate = {
   category: 'modern'
 };
 
-export const sampleCVData: CVData = {
-  personalInfo: {
+export const sampleCVData: CVData = {  personalInfo: {
     name: 'John Smith',
     email: 'john.smith@email.com',
     phone: '+1 (555) 123-4567',
@@ -22,6 +21,7 @@ export const sampleCVData: CVData = {
     github: 'https://github.com/johnsmith',
     portfolio: 'https://portfolio.johnsmith.dev',
     salaryExpectation: '$120,000 - $150,000',
+    showSalaryInCV: false,
     summary: 'Experienced full-stack developer with 5+ years of expertise in React, Node.js, and cloud technologies. Passionate about building scalable applications and leading development teams. Strong track record of delivering high-quality solutions that drive business growth and improve user experience.',
   },
   experience: [

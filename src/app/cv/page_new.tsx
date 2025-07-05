@@ -125,8 +125,8 @@ export default function CVBuilderPage() {
     return (
       <AppLayout>
         <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/4"></div>
-          <div className="h-96 bg-gray-200 dark:bg-gray-700 rounded"></div>
+          <div className="h-8 bg-gray-200 rounded w-1/4"></div>
+          <div className="h-96 bg-gray-200 rounded"></div>
         </div>
       </AppLayout>
     );
@@ -134,16 +134,16 @@ export default function CVBuilderPage() {
 
   return (
     <AppLayout>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Header */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   CV Builder
                 </h1>
-                <p className="text-gray-600 dark:text-gray-400">
+                <p className="text-gray-600">
                   Create a professional CV with live preview and ATS optimization
                 </p>
               </div>
@@ -151,7 +151,7 @@ export default function CVBuilderPage() {
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                 {/* Auto-save indicator */}
                 {isSaving && (
-                  <div className="flex items-center text-blue-600 dark:text-blue-400">
+                  <div className="flex items-center text-blue-600">
                     <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
@@ -160,7 +160,7 @@ export default function CVBuilderPage() {
                   </div>
                 )}
                 {lastSaved && !isSaving && (
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
+                  <div className="text-sm text-gray-500">
                     Last saved: {lastSaved.toLocaleTimeString()}
                   </div>
                 )}
@@ -185,15 +185,15 @@ export default function CVBuilderPage() {
           </div>
 
           {/* Tabs */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-            <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div className="border-b border-gray-200 bg-gray-50">
               <nav className="flex space-x-8 px-6">
                 <button
                   onClick={() => setActiveTab('form')}
                   className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'form'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   ✏️ Edit CV
@@ -202,8 +202,8 @@ export default function CVBuilderPage() {
                   onClick={() => setActiveTab('preview')}
                   className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'preview'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   👁️ Preview
@@ -212,8 +212,8 @@ export default function CVBuilderPage() {
                   onClick={() => setActiveTab('ats')}
                   className={`py-4 px-2 border-b-2 font-medium text-sm transition-colors ${
                     activeTab === 'ats'
-                      ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400'
+                      ? 'border-blue-500 text-blue-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
                   🎯 ATS Check

@@ -2,10 +2,11 @@
  * Local storage utilities for Proofly CV data persistence
  */
 
-import { CVData, PersonalInfo, Experience, Education, Certification, Language, CVTemplate } from '../types';
+import { CVData, PersonalInfo, Experience, Education, Certification, Language, CVTemplate, CVStyling } from '../types';
 
 const CV_DATA_KEY = 'proofly_cv_data';
 const USER_PREFERENCES_KEY = 'proofly_preferences';
+const JOB_DESCRIPTION_KEY = 'proofly_job_description';
 
 // Default CV template
 const DEFAULT_TEMPLATE: CVTemplate = {
@@ -13,6 +14,50 @@ const DEFAULT_TEMPLATE: CVTemplate = {
   name: 'Modern Professional',
   description: 'Clean and modern design perfect for tech and business roles',
   category: 'modern'
+};
+
+// Default styling configuration
+const DEFAULT_STYLING: CVStyling = {
+  name: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-2xl',
+    color: 'text-gray-900',
+    fontWeight: 'font-bold',
+  },
+  contact: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-sm',
+    color: 'text-gray-600',
+  },
+  sectionTitle: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-lg',
+    color: 'text-gray-800',
+    fontWeight: 'font-semibold',
+  },
+  position: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-base',
+    color: 'text-gray-900',
+    fontWeight: 'font-semibold',
+  },
+  company: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-base',
+    color: 'text-gray-700',
+  },
+  description: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-sm',
+    color: 'text-gray-600',
+    lineHeight: 'leading-relaxed',
+  },
+  skills: {
+    fontFamily: 'font-sans',
+    fontSize: 'text-sm',
+    color: 'text-gray-700',
+    backgroundColor: 'bg-gray-100',
+  },
 };
 
 // Default CV data structure
@@ -27,6 +72,7 @@ const getDefaultCVData = (): CVData => ({
     github: '',
     portfolio: '',
     salaryExpectation: '',
+    showSalaryInCV: false,
     summary: ''
   },
   experience: [],
@@ -34,7 +80,8 @@ const getDefaultCVData = (): CVData => ({
   skills: [],
   certifications: [],
   languages: [],
-  template: DEFAULT_TEMPLATE
+  template: DEFAULT_TEMPLATE,
+  styling: DEFAULT_STYLING
 });
 
 export const cvStorage = {
@@ -214,30 +261,118 @@ export const cvStorage = {
   },
 
   /**
-   * Get user preferences
+   * Clear specific CV section
    */
-  getPreferences: () => {
-    if (typeof window === 'undefined') return {};
+  clearCVSection: (section: 'personalInfo' | 'experience' | 'education' | 'skills' | 'certifications' | 'languages' | 'all'): void => {
+    if (typeof window === 'undefined') return;
     
     try {
-      const data = localStorage.getItem(USER_PREFERENCES_KEY);
-      return data ? JSON.parse(data) : {};
+      const currentData = cvStorage.getCVData();
+        if (section === 'all') {
+        // Clear all data by saving the default data
+        cvStorage.saveCVData(getDefaultCVData());
+        return;
+      }
+      
+      // Clear specific section
+      const updatedData = { ...currentData };
+      
+      switch (section) {
+        case 'personalInfo':
+          updatedData.personalInfo = getDefaultCVData().personalInfo;
+          break;
+        case 'experience':
+          updatedData.experience = [];
+          break;
+        case 'education':
+          updatedData.education = [];
+          break;
+        case 'skills':
+          updatedData.skills = [];
+          break;
+        case 'certifications':
+          updatedData.certifications = [];
+          break;
+        case 'languages':
+          updatedData.languages = [];
+          break;
+      }
+      
+      cvStorage.saveCVData(updatedData);
     } catch (error) {
-      console.error('Error loading preferences:', error);
-      return {};
+      console.error('Error clearing CV section:', error);
     }
   },
 
   /**
-   * Save user preferences
+   * Check if CV has any data
    */
-  savePreferences: (preferences: any): void => {
+  hasCVData: (): boolean => {
+    const data = cvStorage.getCVData();
+    return !!(
+      data.personalInfo.name ||
+      data.personalInfo.email ||
+      data.experience.length > 0 ||
+      data.education.length > 0 ||
+      data.skills.length > 0 ||
+      data.certifications.length > 0 ||
+      data.languages.length > 0
+    );
+  },
+
+  /**
+   * Get CV data summary for confirmation dialogs
+   */
+  getCVSummary: (): string => {
+    const data = cvStorage.getCVData();
+    const sections = [];
+    
+    if (data.personalInfo.name || data.personalInfo.email) {
+      sections.push('Personal Information');
+    }
+    if (data.experience.length > 0) {
+      sections.push(`${data.experience.length} work experience item(s)`);
+    }
+    if (data.education.length > 0) {
+      sections.push(`${data.education.length} education item(s)`);
+    }
+    if (data.skills.length > 0) {
+      sections.push(`${data.skills.length} skill(s)`);
+    }
+    if (data.certifications.length > 0) {
+      sections.push(`${data.certifications.length} certification(s)`);
+    }
+    if (data.languages.length > 0) {
+      sections.push(`${data.languages.length} language(s)`);
+    }    
+    return sections.length > 0 ? sections.join(', ') : 'No data';
+  },
+
+  /**
+   * Get job description from localStorage
+   */
+  getJobDescription: (): string => {
+    if (typeof window === 'undefined') return '';
+    
+    try {
+      const data = localStorage.getItem(JOB_DESCRIPTION_KEY);
+      return data || '';
+    } catch (error) {
+      console.error('Error loading job description:', error);
+      return '';
+    }
+  },
+
+  /**
+   * Save job description to localStorage
+   */
+  saveJobDescription: (jobDescription: string): void => {
     if (typeof window === 'undefined') return;
     
     try {
-      localStorage.setItem(USER_PREFERENCES_KEY, JSON.stringify(preferences));
+      localStorage.setItem(JOB_DESCRIPTION_KEY, jobDescription);
     } catch (error) {
-      console.error('Error saving preferences:', error);
+      console.error('Error saving job description:', error);
     }
   },
 };
