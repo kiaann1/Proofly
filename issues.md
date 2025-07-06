@@ -1,10 +1,10 @@
-
 ### RULES
 # - ensure we are using british wording - s instead of z in things like organization
 
-### Lower Priority
-- **Cover Letter Templates**: Add cover letter templates for common jobs ✅ COMPLETED
+###  Priority
 - **Blog Posts**: Add more SEO ready blog posts - ensure they are great for seo
+- **CV Upload**: CV Upload job experience pulling through lorem ipsum only, 
+- **Blog Posts**: move blog posts into .md or json files and put them in a blogs folder then in the blog page and single blog page pull them from the md or json files - whichever is better
 
 
 
@@ -47,5 +47,26 @@ Proofly is now a fully-featured, production-ready CV builder with comprehensive 
 - **Live Preview**: Real-time CV preview with styling changes
 - **Multiple Exports**: PDF and DOCX formats with style preservation
 - **Professional Templates**: ATS-optimised designs for various industries
+
+## ✅ Recently Completed (Latest Session)
+- **Cover Letter Templates**: Added 8 professional cover letter templates for common job categories:
+  - Software Engineer (Technology) - Emphasizing technical skills and problem-solving
+  - Marketing Manager (Marketing) - Highlighting creativity and campaign management
+  - Data Scientist (Technology) - Focusing on analytics and machine learning
+  - Sales Representative (Sales) - Emphasizing relationship building and target achievement
+  - Project Manager (Management) - Highlighting leadership and delivery capabilities
+  - HR Specialist (Human Resources) - Focusing on people management and recruitment
+  - Financial Analyst (Finance) - Emphasizing analytical skills and financial modeling
+  - Customer Service Representative (Customer Service) - Highlighting communication and problem-solving
+
+### Template Features Added:
+- **Search and Filter**: Users can search templates by title, category, or keywords
+- **Template Selection**: Easy-to-use interface for browsing and selecting templates
+- **Smart Personalisation**: Templates automatically populate with CV data (name, position, skills, etc.)
+- **Flexible Generation**: Support for both template-based and custom cover letter generation
+- **Template Preview**: Clear descriptions and keyword tags for each template
+- **Optional Job Description**: When using templates, job descriptions become optional for faster generation
+- **Template Indicator**: Visual indicator showing which template is selected
+- **Template Removal**: Option to remove selected template and switch to custom generation
 
 The application is **production-ready** and **SEO-optimised** with only minor enhancements remaining for future development.
