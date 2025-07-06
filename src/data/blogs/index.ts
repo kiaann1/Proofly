@@ -14,7 +14,12 @@ export const BLOG_POST_IDS = [
   'remote-work-resume-tips',
   'interview-questions-2025',
   'career-change-resume-guide',
-  'linkedin-profile-optimization'
+  'linkedin-profile-optimization',
+  'cv-template-guide-2025',
+  'job-search-strategies-2025',
+  'salary-negotiation-guide-2025',
+  'skills-based-cv-guide-2025',
+  'graduate-cv-guide-2025'
 ] as const;
 
 export type BlogPostId = typeof BLOG_POST_IDS[number];

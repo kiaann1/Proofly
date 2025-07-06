@@ -17,21 +17,14 @@ export default function MainNavigation() {
   return (
     <nav className="bg-white/95 backdrop-blur-lg border-b border-gray-200/20 sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-16">
+        <div className="flex items-center justify-between h-24">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3 group">
-            <div className="relative w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform duration-200">
-              <span className="text-white font-bold text-lg">P</span>
+            <div className="relative w-30 h-10 bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform duration-200">
+              <span className="text-white font-bold text-lg">Proofly CV</span>
               <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                Proofly
-              </span>
-              <span className="text-xs text-gray-500 -mt-1">
-                Professional CV Builder
-              </span>
-            </div>
+
           </Link>
 
           {/* Navigation Links */}

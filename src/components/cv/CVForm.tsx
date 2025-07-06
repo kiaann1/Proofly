@@ -6,6 +6,7 @@
 import { useState } from 'react';
 import { CVData, PersonalInfo, Experience } from '../../types';
 import CVClearActions from './CVClearActions';
+import { cvStorage } from '../../lib/storage';
 
 interface CVFormProps {
   cvData: CVData;
@@ -16,6 +17,7 @@ interface CVFormProps {
 export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps) {
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [newSkill, setNewSkill] = useState('');
+  const [showDebug, setShowDebug] = useState(false);
 
   const sections = [
     { id: 'personal', name: 'Personal Information', icon: '👤' },
@@ -956,6 +958,49 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
         {/* Clear Actions */}
         <div className="mt-6">
           <CVClearActions onDataCleared={() => onDataRefresh?.()} />
+        </div>
+
+        {/* Debug Panel */}
+        <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+          <button
+            onClick={() => setShowDebug(!showDebug)}
+            className="text-sm font-medium text-yellow-800 hover:text-yellow-900"
+          >
+            🐛 Debug Panel {showDebug ? '▼' : '▶'}
+          </button>
+          
+          {showDebug && (
+            <div className="mt-3 space-y-2 text-xs text-gray-700">
+              <div>
+                <strong>Experience entries:</strong> {cvData.experience.length}
+              </div>
+              <div>
+                <strong>Sample experience check:</strong>
+                {cvData.experience.some(exp => 
+                  exp.company === 'TechCorp Solutions' || 
+                  exp.company === 'StartupXYZ'
+                ) ? ' ⚠️ Sample data detected' : ' ✅ No sample data'}
+              </div>
+              <button
+                onClick={() => {
+                  cvStorage.clearAllData();
+                  onDataRefresh?.();
+                }}
+                className="px-2 py-1 bg-red-100 text-red-800 rounded text-xs hover:bg-red-200 text-black"
+              >
+                Clear All Data
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Current CV Data:', cvData);
+                  console.log('Experience entries:', cvData.experience);
+                }}
+                className="px-2 py-1 bg-blue-100 text-blue-800 rounded text-xs hover:bg-blue-200 ml-2 text-black"
+              >
+                Log Data
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation';
 import React from 'react';
 import AppLayout from '../../../components/layout/AppLayout';
 import Link from 'next/link';
-import { getBlogPostById, getAllBlogPosts, getAllCategories, getRecentBlogPosts } from '../../../lib/blogUtils';
+import { getBlogPostById, getAllBlogPosts, getAllCategories, getRecentBlogPosts } from '../../../lib/blogUtils.server';
 
 interface BlogPostPageProps {
   params: {

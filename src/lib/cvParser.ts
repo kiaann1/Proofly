@@ -3,6 +3,7 @@
  */
 
 import { CVData, PersonalInfo, Experience } from '../types';
+import { sanitizeText, cleanSkill, isUrlOrEmail } from './sanitization';
 
 // Dynamic imports for client-side only libraries
 let pdfjsLib: any = null;
@@ -154,36 +155,51 @@ async function extractTextFromDOCX(file: File): Promise<string> {
 }
 
 /**
- * Enhanced CV parsing with better pattern recognition
+ * Parse CV text into structured data
  */
-export function parseCV(text: string, currentCVData: CVData): ParsedCVData {
-  const lines = text.split('\n').map(line => line.trim()).filter(line => line.length > 0);
+export function parseCV(text: string, existingData?: Partial<CVData>): ParsedCVData {
+  console.log('🔍 Starting CV parsing...');
+  
+  // Sanitize the input text first
+  const sanitizedText = sanitizeText(text);
+  console.log('🧹 Text sanitized, length:', sanitizedText.length);
+  console.log('📝 First 200 characters:', sanitizedText.substring(0, 200));
+  
+  const lines = sanitizedText.split('\n').map(line => sanitizeText(line.trim())).filter(line => line.length > 0);
+  console.log('📋 Total lines after cleaning:', lines.length);
   
   const result: ParsedCVData = {
-    personalInfo: { ...currentCVData.personalInfo },
+    personalInfo: {},
     experience: [],
     education: [],
     skills: [],
-    rawText: text
+    rawText: sanitizedText
   };
 
   // Extract personal information
-  result.personalInfo = extractPersonalInfo(text, lines);
+  result.personalInfo = extractPersonalInfo(sanitizedText, lines);
+  console.log('👤 Extracted personal info:', result.personalInfo);
   
   // Extract personal summary/statement
-  const summary = extractPersonalSummary(text, lines);
+  const summary = extractPersonalSummary(sanitizedText, lines);
   if (summary) {
-    result.personalInfo.summary = summary;
+    result.personalInfo.summary = sanitizeText(summary);
+    console.log('📄 Extracted summary:', result.personalInfo.summary);
   }
-  
+
   // Extract skills
-  result.skills = extractSkills(text, lines);
+  result.skills = extractSkills(sanitizedText, lines);
+  console.log('⚡ Extracted skills:', result.skills);
   
   // Extract experience
-  result.experience = extractExperience(text, lines);
+  result.experience = extractExperience(sanitizedText, lines);
+  console.log('💼 Extracted experience entries:', result.experience.length);
+  console.log('💼 Experience details:', result.experience);
   
   // Extract education
-  result.education = extractEducation(text, lines);
+  result.education = extractEducation(sanitizedText, lines);
+  console.log('🎓 Extracted education entries:', result.education.length);
+  console.log('🎓 Education details:', result.education);
 
   return result;
 }
@@ -269,17 +285,21 @@ function extractSkills(text: string, lines: string[]): string[] {
   // Common skill section headers
   const skillHeaders = [
     'skills', 'technical skills', 'core competencies', 'technologies',
-    'programming languages', 'tools', 'expertise', 'proficiencies'
+    'programming languages', 'tools', 'expertise', 'proficiencies',
+    'key skills', 'technical competencies'
   ];
   
   let inSkillsSection = false;
   let skillsFound = false;
   
+  console.log('⚡ Starting skills extraction...');
+  
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].toLowerCase();
     
     // Check if we're entering a skills section
-    if (skillHeaders.some(header => line.includes(header))) {
+    if (skillHeaders.some(header => line.includes(header) && line.length < 60)) {
+      console.log('📍 Found skills section header:', lines[i]);
       inSkillsSection = true;
       skillsFound = true;
       continue;
@@ -290,8 +310,11 @@ function extractSkills(text: string, lines: string[]): string[] {
       line.includes('experience') || 
       line.includes('education') || 
       line.includes('work history') ||
-      line.includes('employment')
+      line.includes('employment') ||
+      line.includes('projects') ||
+      line.includes('certifications')
     )) {
+      console.log('🚪 Leaving skills section at:', lines[i]);
       inSkillsSection = false;
       continue;
     }
@@ -299,17 +322,25 @@ function extractSkills(text: string, lines: string[]): string[] {
     // Extract skills from the current line
     if (inSkillsSection && lines[i].trim()) {
       const lineSkills = extractSkillsFromLine(lines[i]);
-      lineSkills.forEach(skill => skills.add(skill));
+      console.log('🔍 Processing skills line:', lines[i], '-> Found:', lineSkills);
+      lineSkills.forEach(skill => {
+        const cleanedSkill = cleanSkill(skill);
+        if (cleanedSkill) {
+          skills.add(cleanedSkill);
+        }
+      });
     }
   }
   
   // If no dedicated skills section found, look for common technical terms throughout
   if (!skillsFound) {
+    console.log('📍 No skills section found, searching for common skills...');
     const commonSkills = [
       'JavaScript', 'Python', 'Java', 'React', 'Node.js', 'Angular', 'Vue.js',
       'HTML', 'CSS', 'SQL', 'MongoDB', 'PostgreSQL', 'Git', 'AWS', 'Docker',
       'TypeScript', 'PHP', 'C++', 'C#', '.NET', 'Ruby', 'Go', 'Rust',
-      'Machine Learning', 'Data Analysis', 'Project Management', 'Agile', 'Scrum'
+      'Machine Learning', 'Data Analysis', 'Project Management', 'Agile', 'Scrum',
+      'Kubernetes', 'Azure', 'Google Cloud', 'Linux', 'Windows', 'MacOS'
     ];
     
     for (const skill of commonSkills) {
@@ -319,7 +350,9 @@ function extractSkills(text: string, lines: string[]): string[] {
     }
   }
   
-  return Array.from(skills).slice(0, 20); // Limit to 20 skills
+  const finalSkills = Array.from(skills).slice(0, 20); // Limit to 20 skills
+  console.log('✅ Final skills extracted:', finalSkills);
+  return finalSkills;
 }
 
 /**
@@ -338,6 +371,7 @@ function extractSkillsFromLine(line: string): string[] {
  * Extract work experience with enhanced pattern recognition
  */
 function extractExperience(text: string, lines: string[]): Experience[] {
+  console.log('💼 Starting experience extraction...');
   const experiences: Experience[] = [];
   
   const experienceHeaders = [
@@ -354,6 +388,7 @@ function extractExperience(text: string, lines: string[]): Experience[] {
     
     // Check if we're entering experience section
     if (experienceHeaders.some(header => line.includes(header) && line.length < 50)) {
+      console.log('📍 Found experience section header:', lines[i]);
       inExperienceSection = true;
       continue;
     }
@@ -366,24 +401,27 @@ function extractExperience(text: string, lines: string[]): Experience[] {
       line.includes('projects') ||
       line.includes('achievements')
     )) {
-      if (currentExperience && currentExperience.position && currentExperience.company) {
-        experiences.push({
+      console.log('🚪 Leaving experience section at:', lines[i]);      if (currentExperience && currentExperience.position && currentExperience.company) {
+        const experienceEntry = {
           id: crypto.randomUUID(),
-          position: currentExperience.position || '',
-          company: currentExperience.company || '',
-          location: currentExperience.location || '',
-          startDate: currentExperience.startDate || '',
-          endDate: currentExperience.endDate || '',
+          position: sanitizeText(currentExperience.position || ''),
+          company: sanitizeText(currentExperience.company || ''),
+          location: sanitizeText(currentExperience.location || ''),
+          startDate: sanitizeText(currentExperience.startDate || ''),
+          endDate: sanitizeText(currentExperience.endDate || ''),
           current: currentExperience.current || false,
-          description: descriptionLines.join(' ').trim(),
+          description: sanitizeText(descriptionLines.join(' ').trim()),
           achievements: []
-        });
+        };
+        console.log('➕ Adding final experience:', experienceEntry);
+        experiences.push(experienceEntry);
       }
       break;
     }
-    
+
     if (inExperienceSection && lines[i].trim()) {
       const originalLine = lines[i];
+      console.log('🔍 Processing experience line:', originalLine);
       
       // Look for job title patterns (usually appear first or with certain formatting)
       const jobTitleIndicators = [
@@ -403,19 +441,21 @@ function extractExperience(text: string, lines: string[]): Experience[] {
       // Check if this line contains dates (likely a position header)
       const dateMatches = originalLine.match(datePattern);
       if (dateMatches && dateMatches.length > 0) {
-        // This is likely a job entry header, save previous experience if exists
+        console.log('📅 Found date pattern, creating new experience entry:', dateMatches);        // This is likely a job entry header, save previous experience if exists
         if (currentExperience && currentExperience.position && currentExperience.company) {
-          experiences.push({
+          const experienceEntry = {
             id: crypto.randomUUID(),
-            position: currentExperience.position || '',
-            company: currentExperience.company || '',
-            location: currentExperience.location || '',
-            startDate: currentExperience.startDate || '',
-            endDate: currentExperience.endDate || '',
+            position: sanitizeText(currentExperience.position || ''),
+            company: sanitizeText(currentExperience.company || ''),
+            location: sanitizeText(currentExperience.location || ''),
+            startDate: sanitizeText(currentExperience.startDate || ''),
+            endDate: sanitizeText(currentExperience.endDate || ''),
             current: currentExperience.current || false,
-            description: descriptionLines.join(' ').trim(),
+            description: sanitizeText(descriptionLines.join(' ').trim()),
             achievements: []
-          });
+          };
+          console.log('➕ Adding experience:', experienceEntry);
+          experiences.push(experienceEntry);
         }
         
         // Start new experience
@@ -456,6 +496,7 @@ function extractExperience(text: string, lines: string[]): Experience[] {
       // If we have a current experience but no position yet, try to extract it
       if (currentExperience && !currentExperience.position) {
         if (jobTitleIndicators.some(pattern => pattern.test(originalLine))) {
+          console.log('💼 Found job title:', originalLine);
           currentExperience.position = originalLine;
           continue;
         }
@@ -465,9 +506,11 @@ function extractExperience(text: string, lines: string[]): Experience[] {
       if (currentExperience && currentExperience.position && !currentExperience.company) {
         const companyMatch = originalLine.match(companyIndicators[1]);
         if (companyMatch) {
+          console.log('🏢 Found company (pattern match):', companyMatch[1]);
           currentExperience.company = companyMatch[1];
           continue;
         } else if (companyIndicators[0].test(originalLine)) {
+          console.log('🏢 Found company (indicator test):', originalLine);
           currentExperience.company = originalLine;
           continue;
         }
@@ -475,36 +518,42 @@ function extractExperience(text: string, lines: string[]): Experience[] {
       
       // If line starts with bullet points or dashes, it's likely a description/achievement
       if (/^[-•*]\s+/.test(originalLine) || (currentExperience && originalLine.length > 20)) {
+        console.log('📝 Adding description line:', originalLine);
         descriptionLines.push(originalLine.replace(/^[-•*]\s+/, ''));
       }
     }
   }
-  
-  // Don't forget the last experience
+    // Don't forget the last experience
   if (currentExperience && currentExperience.position && currentExperience.company) {
-    experiences.push({
+    const experienceEntry = {
       id: crypto.randomUUID(),
-      position: currentExperience.position || '',
-      company: currentExperience.company || '',
-      location: currentExperience.location || '',
-      startDate: currentExperience.startDate || '',
-      endDate: currentExperience.endDate || '',
+      position: sanitizeText(currentExperience.position || ''),
+      company: sanitizeText(currentExperience.company || ''),
+      location: sanitizeText(currentExperience.location || ''),
+      startDate: sanitizeText(currentExperience.startDate || ''),
+      endDate: sanitizeText(currentExperience.endDate || ''),
       current: currentExperience.current || false,
-      description: descriptionLines.join(' ').trim(),
+      description: sanitizeText(descriptionLines.join(' ').trim()),
       achievements: []
-    });
+    };
+    console.log('➕ Adding final experience entry:', experienceEntry);
+    experiences.push(experienceEntry);
   }
   
+  console.log('✅ Experience extraction complete. Found', experiences.length, 'entries');
   return experiences;
 }
 
 /**
- * Extract personal summary/objective statement
+ * Extract personal summary/objective statement with improved detection
  */
 function extractPersonalSummary(text: string, lines: string[]): string | undefined {
+  console.log('📄 Starting summary extraction...');
+  
   const summaryHeaders = [
     'summary', 'professional summary', 'profile', 'objective', 'personal statement',
-    'career objective', 'professional profile', 'about me', 'overview'
+    'career objective', 'professional profile', 'about me', 'overview',
+    'personal profile', 'executive summary', 'career summary'
   ];
   
   let inSummarySection = false;
@@ -515,54 +564,92 @@ function extractPersonalSummary(text: string, lines: string[]): string | undefin
     
     // Check if we're entering a summary section
     if (summaryHeaders.some(header => 
-      line.includes(header) && line.length < 50 // Avoid matching within content
+      line.includes(header) && line.length < 60 // Avoid matching within content
     )) {
+      console.log('📍 Found summary section header:', lines[i]);
       inSummarySection = true;
       continue;
     }
     
-    // Check if we're leaving the summary section
+    // Check if we're leaving summary section
     if (inSummarySection && (
       line.includes('experience') || 
-      line.includes('education') || 
-      line.includes('skills') ||
       line.includes('work history') ||
       line.includes('employment') ||
-      line.includes('qualifications')
+      line.includes('education') ||
+      line.includes('skills') ||
+      line.includes('certifications')
     )) {
+      console.log('🚪 Leaving summary section at:', lines[i]);
       break;
     }
     
     // Collect summary content
-    if (inSummarySection && lines[i].trim() && lines[i].length > 20) {
-      summaryLines.push(lines[i]);
+    if (inSummarySection && lines[i].trim()) {
+      const sanitizedLine = sanitizeText(lines[i]);
+      if (sanitizedLine.length > 10) { // Only meaningful content
+        summaryLines.push(sanitizedLine);
+        console.log('📝 Adding summary line:', sanitizedLine);
+      }
     }
   }
   
-  if (summaryLines.length > 0) {
-    return summaryLines.join(' ').trim();
-  }
-  
-  // Fallback: look for summary-like content near the top
-  const topLines = lines.slice(0, 10);
-  for (const line of topLines) {
-    if (line.length > 50 && line.length < 300 && 
-        !line.includes('@') && !line.includes('phone') && 
-        !line.includes('linkedin') && !line.includes('github')) {
-      return line;
+  // If no dedicated section found, look for summary-like content near the top
+  if (summaryLines.length === 0) {
+    console.log('📍 No summary section found, looking for summary-like content...');
+    
+    // Look for longer paragraphs in the first 10 lines that might be summaries
+    for (let i = 0; i < Math.min(10, lines.length); i++) {
+      const line = sanitizeText(lines[i]);
+      
+      // Skip headers, contact info, and short lines
+      if (line.length > 50 && 
+          !isUrlOrEmail(line) &&
+          !line.match(/\d{3,}/) && // No long numbers (phone)
+          !summaryHeaders.some(header => line.toLowerCase().includes(header))) {
+        
+        // This might be a summary paragraph
+        summaryLines.push(line);
+        console.log('📝 Found potential summary content:', line);
+        
+        // Look for continuation lines
+        for (let j = i + 1; j < Math.min(i + 5, lines.length); j++) {
+          const nextLine = sanitizeText(lines[j]);
+          if (nextLine.length > 30 && 
+              !isUrlOrEmail(nextLine) &&
+              !nextLine.match(/\d{3,}/)) {
+            summaryLines.push(nextLine);
+            console.log('📝 Adding continuation line:', nextLine);
+          } else {
+            break;
+          }
+        }
+        break;
+      }
     }
   }
   
-  return undefined;
+  const summary = summaryLines.join(' ').trim();
+  const finalSummary = summary.length > 30 ? summary : undefined;
+  
+  if (finalSummary) {
+    console.log('✅ Summary extracted:', finalSummary.substring(0, 100) + '...');  } else {
+    console.log('❌ No summary found');
+  }
+  
+  return finalSummary;
 }
 
 /**
- * Extract education information
+ * Extract education information with improved detection
  */
 function extractEducation(text: string, lines: string[]): any[] {
+  console.log('🎓 Starting education extraction...');
   const education: any[] = [];
+  
   const educationHeaders = [
-    'education', 'academic background', 'qualifications', 'academic qualifications'
+    'education', 'academic background', 'qualifications', 'degrees',
+    'academic qualifications', 'educational background'
   ];
   
   let inEducationSection = false;
@@ -572,7 +659,8 @@ function extractEducation(text: string, lines: string[]): any[] {
     const line = lines[i].toLowerCase();
     
     // Check if we're entering education section
-    if (educationHeaders.some(header => line.includes(header))) {
+    if (educationHeaders.some(header => line.includes(header) && line.length < 60)) {
+      console.log('📍 Found education section header:', lines[i]);
       inEducationSection = true;
       continue;
     }
@@ -582,57 +670,140 @@ function extractEducation(text: string, lines: string[]): any[] {
       line.includes('experience') || 
       line.includes('skills') ||
       line.includes('certifications') ||
-      line.includes('projects')
+      line.includes('projects') ||
+      line.includes('work history')
     )) {
-      if (currentEducation) {
+      console.log('🚪 Leaving education section at:', lines[i]);
+      // Save current education if exists
+      if (currentEducation && currentEducation.degree) {
         education.push(currentEducation);
       }
       break;
     }
     
     if (inEducationSection && lines[i].trim()) {
+      const originalLine = sanitizeText(lines[i]);
+      console.log('🔍 Processing education line:', originalLine);
+      
       // Look for degree patterns
-      const degreePatterns = [
-        /\b(bachelor|master|phd|doctorate|diploma|certificate|degree)\b/i,
-        /\b(ba|bs|ma|ms|mba|phd|bsc|msc)\b/i
-      ];
+      const degreePattern = /(bachelor|master|phd|doctorate|associate|diploma|certificate|b\.?a\.?|b\.?s\.?|m\.?a\.?|m\.?s\.?|ph\.?d\.?)/i;
       
-      const universityPatterns = [
-        /\b(university|college|institute|school)\b/i
-      ];
+      // Look for institution patterns
+      const institutionPattern = /(university|college|institute|school|academy)/i;
       
-      if (degreePatterns.some(pattern => pattern.test(lines[i]))) {
-        if (currentEducation) {
+      // Look for date patterns
+      const datePattern = /\b((?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+20\d{2}|20\d{2}|(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)[a-z]*\s+\d{2})\b/gi;
+      
+      if (degreePattern.test(originalLine) || institutionPattern.test(originalLine)) {
+        // Save previous education if exists
+        if (currentEducation && currentEducation.degree) {
           education.push(currentEducation);
         }
+        
+        // Start new education entry
         currentEducation = {
           id: crypto.randomUUID(),
-          degree: lines[i],
+          degree: '',
           institution: '',
-          location: '',
           startDate: '',
           endDate: '',
           current: false,
           description: ''
         };
-      } else if (currentEducation && universityPatterns.some(pattern => pattern.test(lines[i]))) {
-        currentEducation.institution = lines[i];
-      } else if (currentEducation && /\b(20\d{2}|19\d{2})\b/.test(lines[i])) {
-        // Extract dates
-        const yearMatches = lines[i].match(/\b(20\d{2}|19\d{2})\b/g);
-        if (yearMatches && yearMatches.length >= 1) {
-          currentEducation.endDate = yearMatches[yearMatches.length - 1];
-          if (yearMatches.length >= 2) {
-            currentEducation.startDate = yearMatches[0];
+        
+        const dateMatches = originalLine.match(datePattern);
+        if (dateMatches) {
+          currentEducation.startDate = dateMatches[0] || '';
+          currentEducation.endDate = dateMatches[1] || dateMatches[0] || '';
+        }
+        
+        // Try to extract degree and institution
+        if (degreePattern.test(originalLine)) {
+          currentEducation.degree = originalLine;
+        }
+        
+        if (institutionPattern.test(originalLine)) {
+          if (currentEducation.degree) {
+            // This line contains the institution
+            const parts = originalLine.split(/,|\n/).map(p => p.trim());
+            for (const part of parts) {
+              if (institutionPattern.test(part)) {
+                currentEducation.institution = part;
+                break;
+              }
+            }
+          } else {
+            // This line is the institution, look for degree in nearby lines
+            currentEducation.institution = originalLine;
           }
+        }
+        
+        console.log('📚 Found education entry:', currentEducation);
+      } else if (currentEducation) {
+        // This might be additional info for the current education
+        if (!currentEducation.institution && institutionPattern.test(originalLine)) {
+          currentEducation.institution = originalLine;
+        } else if (!currentEducation.degree && degreePattern.test(originalLine)) {
+          currentEducation.degree = originalLine;
+        } else if (originalLine.length > 20) {
+          // Might be description
+          currentEducation.description = originalLine;
         }
       }
     }
   }
   
-  if (currentEducation) {
+  // Don't forget the last education entry
+  if (currentEducation && currentEducation.degree) {
     education.push(currentEducation);
   }
   
+  console.log('✅ Education extraction complete. Found', education.length, 'entries');
   return education;
+}
+
+/**
+ * Test function for debugging CV parsing
+ */
+export function testCVParsing(): void {
+  const testCV = `
+John Doe
+john.doe@email.com
++1234567890
+New York, NY
+
+WORK EXPERIENCE
+
+Senior Software Developer
+TechCorp Inc.
+Jan 2022 - Present
+• Led development team of 5 engineers
+• Built scalable web applications using React and Node.js
+• Improved system performance by 40%
+
+Software Developer
+StartupABC
+Jun 2020 - Dec 2021
+• Developed REST APIs and microservices
+• Collaborated with cross-functional teams
+• Implemented automated testing processes
+
+EDUCATION
+
+Bachelor of Computer Science
+University of Technology
+2016 - 2020
+
+SKILLS
+JavaScript, Python, React, Node.js, AWS, Docker
+  `;
+  
+  console.log('🧪 Testing CV parsing with sample data...');
+  const result = parseCV(testCV);
+  console.log('🧪 Test result:', result);
+}
+
+// Make test function available globally for debugging
+if (typeof window !== 'undefined') {
+  (window as any).testCVParsing = testCVParsing;
 }

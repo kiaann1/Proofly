@@ -375,4 +375,20 @@ export const cvStorage = {
       console.error('Error saving job description:', error);
     }
   },
+
+  /**
+   * Clear all CV data from localStorage (for debugging)
+   */
+  clearAllData: (): void => {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      localStorage.removeItem(CV_DATA_KEY);
+      localStorage.removeItem(USER_PREFERENCES_KEY);
+      localStorage.removeItem(JOB_DESCRIPTION_KEY);
+      console.log('🧹 All CV data cleared from localStorage');
+    } catch (error) {
+      console.error('Error clearing CV data:', error);
+    }
+  },
 };

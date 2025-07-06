@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -61,6 +60,10 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       // Parse CV data using enhanced parsing
       const parsedData = parseCV(text, cvData);
       
+      console.log('🔍 Upload debug - Parsed data:', parsedData);
+      console.log('🔍 Upload debug - Parsed experience:', parsedData.experience);
+      console.log('🔍 Upload debug - Current cvData experience:', cvData.experience);
+      
       // Merge parsed data with existing CV data
       const updatedCVData: Partial<CVData> = {
         personalInfo: {
@@ -72,6 +75,9 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         skills: parsedData.skills.length > 0 ? parsedData.skills : cvData.skills,
         experience: parsedData.experience.length > 0 ? parsedData.experience : cvData.experience
       };
+      
+      console.log('🔍 Upload debug - Final merged data:', updatedCVData);
+      console.log('🔍 Upload debug - Final experience:', updatedCVData.experience);
       
       onChange(updatedCVData);
       setShowUploadSuccess(true);
