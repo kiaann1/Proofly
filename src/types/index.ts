@@ -109,12 +109,15 @@ export interface ContentAnalysis {
 
 export interface ATSSuggestion {
   id: string;
-  type: 'keyword' | 'format' | 'content' | 'structure';
+  type: 'keyword' | 'format' | 'content' | 'structure' | 'guidance';
   priority: 'high' | 'medium' | 'low';
   title: string;
   description: string;
   actionable: boolean;
   autoFixAvailable?: boolean;
+  implementationGuide?: string;
+  whyImportant?: string;
+  howToImplement?: string;
 }
 
 export interface JobDescription {

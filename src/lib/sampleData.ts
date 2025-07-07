@@ -68,7 +68,7 @@ export const sampleCVData: CVData = {  personalInfo: {
       endDate: '2019-05',
       current: false,
       gpa: '3.8',
-      description: 'Specialized in software engineering and database systems. Member of Computer Science Honor Society.'
+      description: 'Specialised in software engineering and database systems. Member of Computer Science Honor Society.'
     }
   ],
   skills: [

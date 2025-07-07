@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { CVData, PersonalInfo, Experience } from '../../types';
 import CVClearActions from './CVClearActions';
 import { cvStorage } from '../../lib/storage';
+import { sanitizeText } from '../../lib/sanitization';
 
 interface CVFormProps {
   cvData: CVData;
@@ -28,19 +29,25 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
     { id: 'languages', name: 'Languages', icon: '🌍' },
   ];
   const handlePersonalInfoChange = (field: keyof PersonalInfo, value: string | boolean) => {
+    // Sanitize string inputs but preserve boolean values
+    const sanitizedValue = typeof value === 'string' ? sanitizeText(value) : value;
+    
     onChange({
       personalInfo: {
         ...cvData.personalInfo,
-        [field]: value,
+        [field]: sanitizedValue,
       },
     });
   };
 
   const handleExperienceChange = (index: number, field: keyof Experience, value: any) => {
+    // Sanitize string inputs
+    const sanitizedValue = typeof value === 'string' ? sanitizeText(value) : value;
+    
     const newExperience = [...cvData.experience];
     newExperience[index] = {
       ...newExperience[index],
-      [field]: value,
+      [field]: sanitizedValue,
     };
     onChange({ experience: newExperience });
   };
@@ -72,8 +79,9 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const updateAchievement = (expIndex: number, achievementIndex: number, value: string) => {
+    const sanitizedValue = sanitizeText(value);
     const newExperience = [...cvData.experience];
-    newExperience[expIndex].achievements[achievementIndex] = value;
+    newExperience[expIndex].achievements[achievementIndex] = sanitizedValue;
     onChange({ experience: newExperience });
   };
 
@@ -88,8 +96,9 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const addSkill = (skill: string) => {
-    if (skill.trim() && !cvData.skills.includes(skill.trim())) {
-      onChange({ skills: [...cvData.skills, skill.trim()] });
+    const sanitizedSkill = sanitizeText(skill);
+    if (sanitizedSkill.trim() && !cvData.skills.includes(sanitizedSkill.trim())) {
+      onChange({ skills: [...cvData.skills, sanitizedSkill.trim()] });
     }
   };
 
@@ -765,7 +774,7 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Issuing Organization *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Issuing Organisation *</label>
                   <input
                     type="text"
                     value={cert.issuer}

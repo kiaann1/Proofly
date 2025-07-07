@@ -1,10 +1,12 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import toast from 'react-hot-toast';
 import { CVData, ATSAnalysis, ATSSuggestion, JobDescription } from '../../types';
 import { analyzeATS } from '../../lib/atsAnalyzer';
 import { extractTextFromFile, parseCV } from '../../lib/cvParser';
 import { cvStorage } from '../../lib/storage';
+import SuggestionTooltip from '../ui/SuggestionTooltip';
 
 interface ATSCheckerProps {
   cvData: CVData;
@@ -19,12 +21,14 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
   const [analysis, setAnalysis] = useState<ATSAnalysis | null>(null);
   const [activeTab, setActiveTab] = useState<'upload' | 'jobdesc' | 'analysis' | 'suggestions'>('upload');
   const [showUploadSuccess, setShowUploadSuccess] = useState(false);
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['high'])); // High priority expanded by default
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set()); // Start empty to prevent hydration mismatch
   const [isClient, setIsClient] = useState(false);
 
   // Client-side hydration fix
   useEffect(() => {
     setIsClient(true);
+    // Set initial expanded sections after hydration
+    setExpandedSections(new Set(['high'])); // High priority expanded by default
   }, []);
 
   // Load job description from storage on mount
@@ -41,12 +45,27 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     cvStorage.saveJobDescription(value);
   };
 
-  // Auto-analyze when CV data changes
   useEffect(() => {
     if (cvData.personalInfo.name || cvData.experience.length > 0) {
-      handleAnalyze();
+      // Debounce the analysis to avoid excessive re-computation
+      const analysisTimer = setTimeout(() => {
+        handleAnalyze();
+      }, 1000); // 1 second delay to allow for rapid changes
+
+      return () => clearTimeout(analysisTimer);
     }
   }, [cvData]);
+
+  // Re-analyze when job description changes
+  useEffect(() => {
+    if ((cvData.personalInfo.name || cvData.experience.length > 0) && jobDescription.trim()) {
+      const analysisTimer = setTimeout(() => {
+        handleAnalyze();
+      }, 1500); // Longer delay for job description changes
+
+      return () => clearTimeout(analysisTimer);
+    }
+  }, [jobDescription]);
   // Handle CV file upload and parsing
   const handleCVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -90,7 +109,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       setActiveTab('jobdesc');
     } catch (error) {
       console.error('Error parsing CV:', error);
-      alert(error instanceof Error ? error.message : 'Failed to parse CV. Please ensure it\'s a valid PDF or text file.');
+      toast.error(error instanceof Error ? error.message : 'Failed to parse CV. Please ensure it\'s a valid PDF or text file.');
     } finally {      setIsUploading(false);
     }
   };
@@ -104,7 +123,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         setActiveTab('analysis');
       }
     } catch (error) {
-      console.error('Error analyzing CV:', error);
+      console.error('Error analysing CV:', error);
     } finally {
       setIsAnalyzing(false);
     }
@@ -124,6 +143,17 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
   const applySuggestion = (suggestion: ATSSuggestion) => {
     console.log('Applying suggestion:', suggestion);
     
+    // Function to trigger re-analysis after applying a fix
+    const triggerReAnalysis = () => {
+      setTimeout(() => {
+        handleAnalyze();
+        toast.success('Analysis updated to reflect your changes!', {
+          duration: 2000,
+          icon: '🔄',
+        });
+      }, 500); // Short delay to allow state updates
+    };
+    
     // Auto-apply certain suggestions
     switch (suggestion.type) {
       case 'keyword':
@@ -134,25 +164,39 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           
           if (keyword && !cvData.skills.includes(keyword)) {
             onChange({ skills: [...cvData.skills, keyword] });
-            alert(`Added "${keyword}" to your skills!`);
+            toast.success(`Added "${keyword}" to your skills!`);
+            triggerReAnalysis();
             return;
           }
         }
         
         // Handle missing keywords by adding them to skills
-        if (suggestion.title.includes('Missing') && suggestion.description.includes('keyword')) {
-          const missingKeywords = suggestion.description.match(/keywords?:?\s*([^.]+)/i)?.[1];
-          if (missingKeywords) {
-            const keywords = missingKeywords.split(/[,\s]+/)
+        if (suggestion.title.includes('Missing') || suggestion.title.includes('Critical')) {
+          const keywordMatches = suggestion.description.match(/these.*keywords.*:\s*([^.]+)/i);
+          if (keywordMatches) {
+            const keywords = keywordMatches[1].split(/[,\s]+/)
               .map(k => k.trim().replace(/['"]/g, ''))
               .filter(k => k.length > 1 && !cvData.skills.includes(k));
             
             if (keywords.length > 0) {
               onChange({ skills: [...cvData.skills, ...keywords.slice(0, 3)] }); // Add up to 3 keywords
-              alert(`Added ${keywords.slice(0, 3).join(', ')} to your skills!`);
+              toast.success(`Added ${keywords.slice(0, 3).join(', ')} to your skills!`);
+              triggerReAnalysis();
               return;
             }
           }
+        }
+        
+        // Handle keyword density improvements
+        if (suggestion.title.includes('Keyword Density')) {
+          toast('To improve keyword density, review the job description and naturally incorporate relevant keywords throughout your CV. This requires manual editing for best results.', {
+            duration: 5000,
+            icon: '💡',
+          });
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
+          return;
         }
         break;
         
@@ -168,7 +212,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                 phone: formatted,
               },
             });
-            alert('Phone number formatted successfully!');
+            toast.success('Phone number formatted successfully!');
+            triggerReAnalysis();
             return;
           } else if (phone.length === 11 && phone.startsWith('1')) {
             const formatted = `+1 (${phone.slice(1, 4)}) ${phone.slice(4, 7)}-${phone.slice(7)}`;
@@ -178,7 +223,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                 phone: formatted,
               },
             });
-            alert('Phone number formatted successfully!');
+            toast.success('Phone number formatted successfully!');
+            triggerReAnalysis();
             return;
           }
         }
@@ -192,37 +238,127 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               email: email,
             },
           });
-          alert('Email format improved!');
+          toast.success('Email format improved!');
+          triggerReAnalysis();
+          return;
+        }
+        
+        // Handle missing contact information
+        if (suggestion.description.includes('contact information')) {
+          toast('Please add complete contact information in the Personal Information section of the form.', {
+            duration: 4000,
+            icon: '📝',
+          });
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
           return;
         }
         break;
         
       case 'content':
         // Handle content suggestions
-        if (suggestion.title.includes('Professional summary') && !cvData.personalInfo.summary) {
-          const defaultSummary = `Experienced ${cvData.experience[0]?.position || 'professional'} with expertise in ${cvData.skills.slice(0, 3).join(', ')}. Proven track record of delivering results and contributing to team success.`;
-          onChange({
-            personalInfo: {
-              ...cvData.personalInfo,
-              summary: defaultSummary,
-            },
+        if (suggestion.title.includes('Professional summary') || suggestion.title.includes('Enhance Professional Summary')) {
+          if (!cvData.personalInfo.summary || cvData.personalInfo.summary.length < 50) {
+            const skills = cvData.skills.slice(0, 3).join(', ');
+            const experience = cvData.experience[0]?.position || 'professional';
+            const defaultSummary = skills 
+              ? `Experienced ${experience} with expertise in ${skills}. Proven track record of delivering results and contributing to team success. Seeking opportunities to leverage skills and drive organisational growth.`
+              : `Dedicated ${experience} with strong problem-solving abilities and excellent communication skills. Committed to delivering high-quality results and contributing to team success.`;
+            
+            onChange({
+              personalInfo: {
+                ...cvData.personalInfo,
+                summary: defaultSummary,
+              },
+            });
+            toast.success('Added a professional summary! You can edit it in the Personal Information section.');
+            triggerReAnalysis();
+            return;
+          }
+        }
+        
+        // Handle skills expansion
+        if (suggestion.title.includes('Expand Skills') || suggestion.title.includes('Skills Section')) {
+          const commonSkills = ['Communication', 'Problem Solving', 'Teamwork', 'Time Management', 'Attention to Detail'];
+          const missingSkills = commonSkills.filter(skill => !cvData.skills.includes(skill));
+          
+          if (missingSkills.length > 0) {
+            onChange({ skills: [...cvData.skills, ...missingSkills.slice(0, 3)] });
+            toast.success(`Added ${missingSkills.slice(0, 3).join(', ')} to your skills! You can edit these in the Skills section.`);
+            triggerReAnalysis();
+            return;
+          }
+        }
+        
+        // Handle action verbs enhancement
+        if (suggestion.title.includes('Action Verbs')) {
+          toast('To use stronger action verbs, edit your experience descriptions and replace weak phrases like "responsible for" with strong action words like "managed", "developed", "implemented", or "achieved".', {
+            duration: 6000,
+            icon: '💪',
           });
-          alert('Added a professional summary! You can edit it in the Personal Information section.');
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
           return;
         }
         
-        // Add missing experience details
-        if (suggestion.title.includes('experience') && suggestion.title.includes('details')) {
-          // This would require more sophisticated handling
-          alert('Please add more details to your work experience manually in the form.');
+        // Handle quantifiable achievements
+        if (suggestion.title.includes('Quantifiable') || suggestion.title.includes('measurable')) {
+          toast('Add specific numbers, percentages, or metrics to your achievements. For example: "Increased sales by 25%" or "Managed team of 10". This requires manual editing in the Experience section.', {
+            duration: 6000,
+            icon: '📊',
+          });
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
+          return;
+        }
+        
+        // Handle content expansion
+        if (suggestion.title.includes('Expand Content')) {
+          toast('Your CV needs more detailed content. Please add more information about your experience, achievements, and responsibilities in the form sections.', {
+            duration: 5000,
+            icon: '📝',
+          });
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
           return;
         }
         break;
         
       case 'structure':
         // Handle structural improvements
-        if (suggestion.title.includes('Work experience') && cvData.experience.length === 0) {
-          alert('Please add your work experience in the Experience section of the form.');
+        if (suggestion.title.includes('Work Experience') && cvData.experience.length === 0) {
+          toast('Please add your work experience in the Experience section of the form.', {
+            duration: 4000,
+            icon: '💼',
+          });
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
+          return;
+        }
+        
+        // Handle education section
+        if (suggestion.title.includes('Education')) {
+          toast('Please add your educational background in the Education section of the form.', {
+            duration: 4000,
+            icon: '🎓',
+          });
+          if (onSwitchToForm) {
+            onSwitchToForm();
+          }
+          return;
+        }
+        
+        // Handle job descriptions expansion
+        if (suggestion.title.includes('Job Descriptions') || suggestion.title.includes('Expand Job')) {
+          toast('Please expand your job descriptions with more detailed achievements and responsibilities in the Experience section.', {
+            duration: 5000,
+            icon: '📋',
+          });
           if (onSwitchToForm) {
             onSwitchToForm();
           }
@@ -232,7 +368,13 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     }
     
     // Fallback for unhandled suggestions
-    alert(`This suggestion requires manual action: ${suggestion.description}`);
+    toast(`This suggestion requires manual action: ${suggestion.description}. Please make these changes in the form sections.`, {
+      duration: 5000,
+      icon: '⚠️',
+    });
+    if (onSwitchToForm) {
+      onSwitchToForm();
+    }
   };
 
   const renderUploadTab = () => (
@@ -258,14 +400,14 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               Upload Your CV
             </h3>
             <p className="text-gray-600">
-              Supports PDF, TXT, and other text-based formats
+              Supports PDF and Microsoft Word (DOCX) formats only
             </p>
           </div>
           <div>
             <input
               type="file"
               id="cv-upload"
-              accept=".pdf,.txt,.doc,.docx"
+              accept=".pdf,.docx"
               onChange={handleCVUpload}
               className="hidden"
               disabled={isUploading}
@@ -364,14 +506,14 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           {isAnalyzing ? (
             <>
               <div className="w-4 h-4 border border-white border-t-transparent rounded-full animate-spin"></div>
-              Analyzing...
+              Analysing...
             </>
           ) : (
             <>
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
-              Analyze CV
+              Analyse CV
             </>
           )}
         </button>
@@ -389,7 +531,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           <ul className="text-sm text-blue-700 space-y-1">
             <li>• Copy the entire job posting, not just the title</li>
             <li>• Include required and preferred qualifications</li>
-            <li>• Don't edit or summarize - paste the full text</li>
+            <li>• Don't edit or summarise - paste the full text</li>
             <li>• The analysis works even without a job description</li>
           </ul>
         </div>
@@ -406,7 +548,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           </svg>
           <p className="text-lg text-gray-600 mb-2">No Analysis Yet</p>
           <p className="text-sm text-gray-500">
-            Click "Analyze CV" to see your ATS compatibility score
+            Click "Analyse CV" to see your ATS compatibility score
           </p>
         </div>
       );
@@ -481,16 +623,22 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   Matched Keywords
                 </div>
                 <div className="text-lg font-semibold text-green-600">
-                  {analysis.keywordMatch.matchedKeywords.length}
+                  {jobDescription.trim() ? analysis.keywordMatch.matchedKeywords.length : '-'}
                 </div>
+                {!jobDescription.trim() && (
+                  <div className="text-xs text-gray-500">Add job description first</div>
+                )}
               </div>
               <div>
                 <div className="text-sm font-medium text-gray-700">
                   Missing Keywords
                 </div>
                 <div className="text-lg font-semibold text-red-600">
-                  {analysis.keywordMatch.missingKeywords.length}
+                  {jobDescription.trim() ? analysis.keywordMatch.missingKeywords.length : '-'}
                 </div>
+                {!jobDescription.trim() && (
+                  <div className="text-xs text-gray-500">Add job description first</div>
+                )}
               </div>
             </div>
           </div>
@@ -591,7 +739,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         </div>
 
         {/* Keyword Details */}
-        {jobDescription && (
+        {jobDescription.trim() ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Matched Keywords */}
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -650,6 +798,30 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   Great! Your CV includes the key keywords from the job description
                 </p>
               )}
+            </div>
+          </div>
+        ) : (
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-6">
+            <div className="flex items-start gap-3">
+              <svg className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <h3 className="font-semibold text-amber-800 mb-2">Add Job Description for Keyword Analysis</h3>
+                <p className="text-amber-700 text-sm leading-relaxed mb-4">
+                  To get accurate keyword matching and see which specific terms from the job posting appear in your CV, 
+                  please add the job description in the "Job Description" tab above.
+                </p>
+                <button
+                  onClick={() => setActiveTab('jobdesc')}
+                  className="inline-flex items-center px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white text-sm font-medium rounded-lg transition-colors"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Add Job Description
+                </button>
+              </div>
             </div>
           </div>
         )}
@@ -739,7 +911,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           };
 
           const config = priorityConfig[priority];
-          const isExpanded = expandedSections.has(priority);
+          // Prevent hydration mismatch by defaulting to collapsed until client loads
+          const isExpanded = isClient && expandedSections.has(priority);
 
           return (
             <div key={priority} className={`rounded-xl border ${config.borderColor} ${config.bgColor} overflow-hidden transition-all duration-200`}>
@@ -783,9 +956,24 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <h4 className="font-medium text-gray-900 mb-2">
-                            {suggestion.title}
-                          </h4>
+                          <div className="flex items-center gap-2 mb-2">
+                            <h4 className="font-medium text-gray-900">
+                              {suggestion.title}
+                            </h4>
+                            {(suggestion.whyImportant || suggestion.howToImplement) && (
+                              <SuggestionTooltip 
+                                whyImportant={suggestion.whyImportant}
+                                howToImplement={suggestion.howToImplement}
+                                id={`suggestion-${priority}-${suggestions.indexOf(suggestion)}`}
+                              >
+                                <button className="cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center">
+                                  <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                  </svg>
+                                </button>
+                              </SuggestionTooltip>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-600 mb-3 leading-relaxed">
                             {suggestion.description}
                           </p>

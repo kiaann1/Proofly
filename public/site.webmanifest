@@ -1,0 +1,67 @@
+{
+  "name": "Proofly - Professional CV Builder",
+  "short_name": "Proofly CV",
+  "description": "Free professional CV builder with ATS optimization, cover letter generator, and career advice",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "scope": "/",
+  "lang": "en",
+  "categories": ["productivity", "business", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon-16x16.png",
+      "sizes": "16x16",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon-32x32.png",
+      "sizes": "32x32",
+      "type": "image/png"
+    },
+    {
+      "src": "/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable any"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "CV Builder",
+      "short_name": "CV Builder",
+      "description": "Create a new CV",
+      "url": "/cv",
+      "icons": [{"src": "/favicon-32x32.png", "sizes": "32x32"}]
+    },
+    {
+      "name": "ATS Checker",
+      "short_name": "ATS Check",
+      "description": "Check CV for ATS compatibility",
+      "url": "/ats",
+      "icons": [{"src": "/favicon-32x32.png", "sizes": "32x32"}]
+    },
+    {
+      "name": "Cover Letter",
+      "short_name": "Cover Letter",
+      "description": "Create a cover letter",
+      "url": "/cover-letter",
+      "icons": [{"src": "/favicon-32x32.png", "sizes": "32x32"}]
+    }
+  ],
+  "prefer_related_applications": false,
+  "related_applications": []
+}

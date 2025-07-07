@@ -77,17 +77,20 @@ export default function CVBuilderPage() {
     }
   };
 
-  // Auto-save functionality
+  // Auto-save functionality with debouncing
   useEffect(() => {
+    // Debounce auto-save to prevent excessive saves
     const saveTimer = setTimeout(() => {
-      handleSave(true);
-    }, 2000);
+      if (cvData.personalInfo.name || cvData.experience.length > 0 || cvData.skills.length > 0) {
+        handleSave(true);
+      }
+    }, 3000); // Increased to 3 seconds for better performance
 
     return () => clearTimeout(saveTimer);
   }, [cvData]);
 
   const handleSave = async (isAutoSave = false) => {
-    if (isAutoSave && !cvData.personalInfo.name) return; // Don't auto-save empty CVs
+    if (isAutoSave && !cvData.personalInfo.name && cvData.experience.length === 0) return; // Don't auto-save empty CVs
 
     setIsSaving(true);
     try {

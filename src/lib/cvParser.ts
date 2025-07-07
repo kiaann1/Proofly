@@ -9,6 +9,55 @@ import { sanitizeText, cleanSkill, isUrlOrEmail } from './sanitization';
 let pdfjsLib: any = null;
 let mammoth: any = null;
 
+// File upload security constants
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // .docx
+  'text/plain'
+];
+const ALLOWED_EXTENSIONS = ['.pdf', '.docx', '.txt'];
+
+/**
+ * Validate file before processing for security
+ */
+function validateFile(file: File): void {
+  // Check file size
+  if (file.size > MAX_FILE_SIZE) {
+    throw new Error(`File size too large. Maximum allowed size is ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+  }
+
+  // Check if file is empty
+  if (file.size === 0) {
+    throw new Error('File is empty. Please select a valid CV file.');
+  }
+
+  // Check file extension
+  const fileName = file.name.toLowerCase();
+  const hasValidExtension = ALLOWED_EXTENSIONS.some(ext => fileName.endsWith(ext));
+  
+  if (!hasValidExtension) {
+    throw new Error(`Invalid file type. Only PDF and DOCX files are allowed. Received: ${file.name}`);
+  }
+
+  // Check MIME type (if available)
+  if (file.type && !ALLOWED_MIME_TYPES.includes(file.type.toLowerCase())) {
+    // Some browsers may not provide correct MIME types, so we'll warn but not block
+    console.warn(`Unexpected MIME type: ${file.type}. Proceeding based on file extension.`);
+  }
+
+  // Additional security checks
+  if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+    throw new Error('Invalid file name. File name contains prohibited characters.');
+  }
+
+  // Check for executable extensions hidden in the name
+  const dangerousExtensions = ['.exe', '.bat', '.cmd', '.scr', '.js', '.vbs', '.jar'];
+  if (dangerousExtensions.some(ext => fileName.includes(ext))) {
+    throw new Error('Security risk detected. File name contains prohibited patterns.');
+  }
+}
+
 // Initialize libraries on client side
 async function initializeLibraries() {
   if (typeof window !== 'undefined' && !pdfjsLib) {
@@ -83,6 +132,9 @@ export async function extractTextFromFile(file: File): Promise<string> {
   if (typeof window === 'undefined') {
     throw new Error('File parsing must be done on the client side');
   }
+  
+  // Validate file for security
+  validateFile(file);
   
   // Initialize libraries
   await initializeLibraries();
@@ -162,7 +214,7 @@ export function parseCV(text: string, existingData?: Partial<CVData>): ParsedCVD
   
   // Sanitize the input text first
   const sanitizedText = sanitizeText(text);
-  console.log('🧹 Text sanitized, length:', sanitizedText.length);
+  console.log('🧹 Text sanitised, length:', sanitizedText.length);
   console.log('📝 First 200 characters:', sanitizedText.substring(0, 200));
   
   const lines = sanitizedText.split('\n').map(line => sanitizeText(line.trim())).filter(line => line.length > 0);

@@ -3,18 +3,50 @@
  */
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CVData } from '../../types';
 import ATSChecker from '../../components/cv/ATSChecker';
 import { cvStorage } from '../../lib/storage';
 import Link from 'next/link';
 
+const defaultCVData: CVData = {
+  personalInfo: {
+    name: '',
+    email: '',
+    phone: '',
+    location: '',
+    website: '',
+    linkedin: '',
+    github: '',
+    portfolio: '',
+    salaryExpectation: '',
+    showSalaryInCV: false,
+    summary: '',
+  },
+  experience: [],
+  education: [],
+  skills: [],
+  certifications: [],
+  languages: [],
+  template: {
+    id: 'modern-1',
+    name: 'Modern Professional',
+    description: 'Clean and modern design',
+    category: 'modern',
+  },
+};
+
 export default function ATSCheckerPage() {
-  const [cvData, setCvData] = useState<CVData>(() => {
-    // Try to load existing CV data, or create empty one
+  const [cvData, setCvData] = useState<CVData>(defaultCVData);
+  const [isClient, setIsClient] = useState(false);
+
+  // Handle client-side hydration
+  useEffect(() => {
+    setIsClient(true);
+    // Load CV data from storage after hydration
     const savedCV = cvStorage.getCVData();
-    return savedCV;
-  });
+    setCvData(savedCV);
+  }, []);
 
   const handleCVDataChange = (newData: Partial<CVData>) => {
     const updatedData = { ...cvData, ...newData };
@@ -23,7 +55,20 @@ export default function ATSCheckerPage() {
     cvStorage.saveCVData(updatedData);
   };
 
-  const hasCVData = cvData.personalInfo.name || cvData.experience.length > 0 || cvData.skills.length > 0;
+  // Fix hydration mismatch by ensuring consistent initial state
+  const hasCVData = isClient && (cvData.personalInfo.name || cvData.experience.length > 0 || cvData.skills.length > 0);
+
+  // Prevent hydration mismatch by not rendering until client-side
+  if (!isClient) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading ATS Checker...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -34,7 +79,7 @@ export default function ATSCheckerPage() {
             ATS Compatibility Checker
           </h1>
           <p className="text-xl text-gray-600 max-w-4xl mx-auto leading-relaxed">
-            Analyze your CV against job descriptions and get actionable suggestions to improve 
+            Analyse your CV against job descriptions and get actionable suggestions to improve 
             your chances of passing Applicant Tracking Systems (ATS).
           </p>
         </div>

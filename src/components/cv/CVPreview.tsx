@@ -614,7 +614,7 @@ export default function CVPreview({ cvData, onTemplateChange, onStylingChange }:
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               {/* Styling Controls - Left Column */}
               <div className="space-y-4">
-                <h2 className="text-lg font-semibold text-gray-900">Customize Styling</h2>
+                <h2 className="text-lg font-semibold text-gray-900">Customise Styling</h2>
                 <CVStylingComponent
                   styling={cvData.styling || {
                     name: { fontFamily: 'font-sans', fontSize: 'text-2xl', color: 'text-gray-900', fontWeight: 'font-bold' },
@@ -686,12 +686,6 @@ export default function CVPreview({ cvData, onTemplateChange, onStylingChange }:
           
           <div className="text-gray-300">|</div>
           
-          <button className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors">
-            A4 Size
-          </button>
-          <button className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800 transition-colors">
-            Zoom to Fit
-          </button>
         </div>
       </div>
 
