@@ -21,7 +21,7 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
       throw new Error('PDF export is only available in browser environment');
     }
 
-    const element = document.getElementById(previewElementId);
+    let element = document.getElementById(previewElementId);
     let isTemporaryElement = false;
     
     // If element doesn't exist, create a temporary one
@@ -33,32 +33,41 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
       
       // Create temporary container
       const tempContainer = document.createElement('div');
-      tempContainer.id = 'temp-cv-preview';
-      tempContainer.style.position = 'absolute';
-      tempContainer.style.left = '-9999px';
-      tempContainer.style.top = '0';
-      tempContainer.style.width = '210mm';
-      tempContainer.style.minHeight = '297mm';
-      tempContainer.style.backgroundColor = '#ffffff';
-      tempContainer.style.zIndex = '-1000';
-      tempContainer.style.visibility = 'hidden';
+      const uniqueId = `temp-cv-preview-${Date.now()}`;
+      tempContainer.id = uniqueId;
+      tempContainer.className = 'temp-cv-preview-container';
+      tempContainer.style.cssText = `
+        position: absolute !important;
+        left: -9999px !important;
+        top: 0 !important;
+        width: 210mm !important;
+        min-height: 297mm !important;
+        background-color: #ffffff !important;
+        z-index: -1000 !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        display: block !important;
+        padding: 32px !important;
+        box-sizing: border-box !important;
+        font-family: Arial, sans-serif !important;
+        color: #1f2937 !important;
+        line-height: 1.5 !important;
+      `;
       
       // Add the HTML content
       tempContainer.innerHTML = renderCVHTML(cvData);
       document.body.appendChild(tempContainer);
       
-      // Update the element variable and preview ID
-      const newElement = tempContainer;
+      // Wait for the DOM to update
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      element = tempContainer;
       isTemporaryElement = true;
-      previewElementId = 'temp-cv-preview';
       
-      console.log('Temporary preview element created');
-      
-      // Use the temporary element for PDF generation
-      return await generatePDFFromElement(newElement, cvData, isTemporaryElement);
+      console.log('Temporary preview element created with ID:', uniqueId);
     }
 
-    // Use the existing element
+    // Use the element for PDF generation
     return await generatePDFFromElement(element, cvData, isTemporaryElement);
   } catch (error) {
     console.error('Error exporting to PDF:', error);
@@ -69,7 +78,6 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
 
 async function generatePDFFromElement(element: HTMLElement, cvData: CVData, isTemporaryElement: boolean): Promise<void> {
   try {
-
     console.log('Starting PDF generation...', { 
       element, 
       scrollHeight: element.scrollHeight, 
@@ -81,10 +89,29 @@ async function generatePDFFromElement(element: HTMLElement, cvData: CVData, isTe
       isTemporaryElement
     });
 
-    // Wait longer for any pending renders and ensure all CSS is loaded
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Wait for any pending renders
+    await new Promise(resolve => setTimeout(resolve, 300));
+
+    // Force a reflow to ensure dimensions are calculated
+    element.style.visibility = 'visible';
+    element.style.display = 'block';
+    element.offsetHeight; // Force reflow
+
+    // Wait a bit more for layout to settle
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     // Validate element dimensions
+    const elementRect = element.getBoundingClientRect();
+    const computedStyle = window.getComputedStyle(element);
+    
+    console.log('Element dimensions:', {
+      rect: elementRect,
+      scrollHeight: element.scrollHeight,
+      scrollWidth: element.scrollWidth,
+      computedWidth: computedStyle.width,
+      computedHeight: computedStyle.height
+    });
+
     if (element.scrollHeight === 0 || element.scrollWidth === 0) {
       console.error('Element has zero dimensions', { 
         scrollHeight: element.scrollHeight, 
@@ -93,245 +120,82 @@ async function generatePDFFromElement(element: HTMLElement, cvData: CVData, isTe
         offsetWidth: element.offsetWidth,
         clientHeight: element.clientHeight,
         clientWidth: element.clientWidth,
-        elementStyle: window.getComputedStyle(element),
-        innerHTML: element.innerHTML.substring(0, 200) + '...'
+        computedStyle: {
+          width: computedStyle.width,
+          height: computedStyle.height,
+          display: computedStyle.display,
+          visibility: computedStyle.visibility,
+          position: computedStyle.position
+        }
       });
-      
-      // Try to force re-render
-      element.style.visibility = 'hidden';
-      element.offsetHeight; // Force reflow
-      element.style.visibility = 'visible';
-      
-      // Wait a bit more
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      if (element.scrollHeight === 0 || element.scrollWidth === 0) {
-        throw new Error('CV preview element has no content or zero dimensions. Make sure the CV form is filled out and visible.');
-      }
+      throw new Error('CV preview element has no content or zero dimensions. Make sure the CV form is filled out.');
     }
 
     // Create canvas from the CV preview element
     console.log('About to create canvas with html2canvas...');
     const canvas = await html2canvas(element, {
-      scale: 3, // Higher scale for better quality
+      scale: 2,
       useCORS: true,
       allowTaint: true,
       backgroundColor: '#ffffff',
       height: element.scrollHeight,
       width: element.scrollWidth,
       logging: false,
-      removeContainer: true,
-      imageTimeout: 20000, // Increased timeout
+      removeContainer: false,
+      imageTimeout: 15000,
       foreignObjectRendering: false,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: element.scrollWidth,
+      windowWidth: Math.max(element.scrollWidth, 794), // A4 width in pixels at 96 DPI
       windowHeight: element.scrollHeight,
       x: 0,
       y: 0,
       ignoreElements: (element) => {
-        // Skip elements that might cause issues
-        if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE' || element.tagName === 'NOSCRIPT') {
+        // Skip problematic elements
+        const tagName = element.tagName?.toLowerCase();
+        if (tagName === 'script' || tagName === 'style' || tagName === 'noscript') {
           return true;
         }
-        // Skip hidden elements
         const styles = window.getComputedStyle(element);
         if (styles.display === 'none' || styles.visibility === 'hidden' || styles.opacity === '0') {
           return true;
         }
         return false;
-      },
-      onclone: (clonedDoc) => {
-        // Remove any problematic elements in cloned document
-        const clonedElement = clonedDoc.getElementById(element.id);
-        if (clonedElement) {
-          // Remove any elements that might cause issues
-          const problematicElements = clonedElement.querySelectorAll('iframe, embed, object, video, script, noscript');
-          problematicElements.forEach(el => el.remove());
-
-          // Force all colors to be RGB and handle CSS variables
-          const allElements = clonedElement.querySelectorAll('*');
-          allElements.forEach(el => {
-            const styles = window.getComputedStyle(el);
-            const htmlEl = el as HTMLElement;
-            
-            // Helper function to convert any color to a safe RGB value
-            const getSafeColor = (colorValue: string, defaultColor: string): string => {
-              if (!colorValue || colorValue === 'transparent' || colorValue === 'inherit' || colorValue === 'initial') {
-                return defaultColor;
-              }
-              
-              // Convert CSS variables, oklch, lab, lch, and other modern color formats to RGB
-              if (colorValue.includes('var(') || colorValue.includes('oklch') || 
-                  colorValue.includes('lab(') || colorValue.includes('lch(') ||
-                  colorValue.includes('color-mix(') || colorValue.includes('light-dark(')) {
-                return defaultColor;
-              }
-              
-              // If it's already RGB/RGBA or hex, keep it
-              if (colorValue.match(/^(rgb|rgba|#)/)) {
-                return colorValue;
-              }
-              
-              // For named colors and other formats, use default
-              return defaultColor;
-            };
-
-            // Preserve all computed styles as inline styles for better PDF rendering
-            const computedStyles = {
-              color: getSafeColor(styles.color, '#374151'),
-              backgroundColor: getSafeColor(styles.backgroundColor, 'transparent'),
-              borderColor: getSafeColor(styles.borderColor, '#d1d5db'),
-              fontSize: styles.fontSize,
-              fontWeight: styles.fontWeight,
-              fontFamily: styles.fontFamily || 'Arial, "Helvetica Neue", Helvetica, sans-serif',
-              lineHeight: styles.lineHeight,
-              textAlign: styles.textAlign as any,
-              marginTop: styles.marginTop,
-              marginBottom: styles.marginBottom,
-              marginLeft: styles.marginLeft,
-              marginRight: styles.marginRight,
-              paddingTop: styles.paddingTop,
-              paddingBottom: styles.paddingBottom,
-              paddingLeft: styles.paddingLeft,
-              paddingRight: styles.paddingRight,
-              borderWidth: styles.borderWidth,
-              borderStyle: styles.borderStyle,
-              borderRadius: styles.borderRadius,
-              display: styles.display,
-              flexDirection: styles.flexDirection as any,
-              flexWrap: styles.flexWrap as any,
-              justifyContent: styles.justifyContent as any,
-              alignItems: styles.alignItems as any,
-              gap: styles.gap,
-              width: styles.width,
-              height: styles.height,
-              minWidth: styles.minWidth,
-              minHeight: styles.minHeight,
-              maxWidth: styles.maxWidth,
-              maxHeight: styles.maxHeight,
-              position: styles.position,
-              top: styles.top,
-              left: styles.left,
-              right: styles.right,
-              bottom: styles.bottom,
-              transform: styles.transform,
-              opacity: styles.opacity,
-              textDecoration: styles.textDecoration,
-              textTransform: styles.textTransform,
-              letterSpacing: styles.letterSpacing,
-              wordSpacing: styles.wordSpacing
-            };
-
-            // Apply all preserved styles
-            Object.entries(computedStyles).forEach(([property, value]) => {
-              if (value && value !== 'transparent' && value !== 'none' && value !== 'normal' && value !== 'auto') {
-                (htmlEl.style as any)[property] = value;
-              }
-            });
-            
-            // Force safe web fonts and ensure text is readable
-            htmlEl.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
-            
-            // Ensure specific styles for better PDF rendering
-            if (htmlEl.tagName === 'H1' || htmlEl.tagName === 'H2' || htmlEl.tagName === 'H3') {
-              htmlEl.style.pageBreakInside = 'avoid';
-              htmlEl.style.pageBreakAfter = 'avoid';
-            }
-            
-            // Prevent breaking of experience items
-            if (htmlEl.className.includes('experience') || htmlEl.className.includes('section')) {
-              htmlEl.style.pageBreakInside = 'avoid';
-              htmlEl.style.breakInside = 'avoid';
-            }
-            
-            // Ensure grid layouts work in PDF
-            if (htmlEl.style.display === 'grid' || htmlEl.className.includes('grid')) {
-              htmlEl.style.display = 'block';
-              htmlEl.style.width = '100%';
-            }
-            
-            // Convert flex layouts to more PDF-friendly alternatives
-            if (htmlEl.style.display === 'flex') {
-              if (htmlEl.style.flexDirection === 'column') {
-                htmlEl.style.display = 'block';
-              } else {
-                htmlEl.style.display = 'table';
-                htmlEl.style.width = '100%';
-                const children = Array.from(htmlEl.children) as HTMLElement[];
-                children.forEach(child => {
-                  child.style.display = 'table-cell';
-                  child.style.verticalAlign = 'top';
-                });
-              }
-            }
-          });
-
-          // Ensure the root element has proper styling
-          clonedElement.style.backgroundColor = '#ffffff';
-          clonedElement.style.color = '#374151';
-          clonedElement.style.padding = '32px'; // Ensure padding is preserved (p-8 = 2rem = 32px)
-          clonedElement.style.minHeight = '297mm'; // A4 height
-          clonedElement.style.boxSizing = 'border-box';
-          clonedElement.style.width = '210mm'; // A4 width
-          clonedElement.style.fontFamily = 'Arial, "Helvetica Neue", Helvetica, sans-serif';
-          clonedElement.style.lineHeight = '1.6';
-          clonedElement.style.overflow = 'visible';
-          clonedElement.style.position = 'relative';
-          
-          // Ensure two-column layouts work properly
-          const gridElements = clonedElement.querySelectorAll('.grid');
-          gridElements.forEach(grid => {
-            const htmlGrid = grid as HTMLElement;
-            if (htmlGrid.className.includes('grid-cols-3')) {
-              htmlGrid.style.display = 'table';
-              htmlGrid.style.width = '100%';
-              htmlGrid.style.tableLayout = 'fixed';
-              
-              const children = Array.from(htmlGrid.children) as HTMLElement[];
-              children.forEach((child, index) => {
-                child.style.display = 'table-cell';
-                child.style.verticalAlign = 'top';
-                child.style.padding = '0 8px';
-                if (child.className.includes('col-span-2')) {
-                  child.style.width = '66.666%';
-                } else if (child.className.includes('col-span-1')) {
-                  child.style.width = '33.333%';
-                }
-              });
-            }
-          });
-        }
       }
     });
 
     console.log('Canvas created successfully', { width: canvas.width, height: canvas.height });
 
-    // Create PDF with higher quality settings
-    const imgData = canvas.toDataURL('image/png', 1.0); // Maximum quality
+    // Create PDF with high quality settings
+    const imgData = canvas.toDataURL('image/png', 1.0);
     console.log('Image data created, length:', imgData.length);
     
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
       format: 'a4',
-      compress: false, // Don't compress for better quality
+      compress: false,
       precision: 2
     });
 
     console.log('PDF instance created');
 
     const imgWidth = 210; // A4 width in mm
-    const pageHeight = 297; // A4 height in mm (corrected from 295)
+    const pageHeight = 297; // A4 height in mm
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
-
     let position = 0;
 
-    console.log('Adding image to PDF...', { imgWidth, imgHeight, pageHeight, canvasHeight: canvas.height, canvasWidth: canvas.width });
+    console.log('Adding image to PDF...', { 
+      imgWidth, 
+      imgHeight, 
+      pageHeight, 
+      canvasHeight: canvas.height, 
+      canvasWidth: canvas.width 
+    });
 
-    // Add first page with better quality settings
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST'); // Use FAST compression for better quality
+    // Add first page
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST');
     heightLeft -= pageHeight;
 
     // Add additional pages if needed

@@ -1,7 +1,6 @@
 /**
  * Standalone CV Renderer for PDF Export
  */
-import React from 'react';
 import { CVData } from '../types';
 
 export function renderCVHTML(cvData: CVData): string {
