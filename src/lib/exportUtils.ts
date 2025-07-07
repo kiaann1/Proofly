@@ -22,20 +22,63 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
     }
 
     const element = document.getElementById(previewElementId);
+    let isTemporaryElement = false;
+    
+    // If element doesn't exist, create a temporary one
     if (!element) {
-      console.error(`Element with ID '${previewElementId}' not found`);
-      console.log('Available elements:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
-      throw new Error(`Preview element with ID '${previewElementId}' not found`);
+      console.log(`Element with ID '${previewElementId}' not found, creating temporary element...`);
+      
+      // Import the CV renderer
+      const { renderCVHTML } = await import('./cvRenderer');
+      
+      // Create temporary container
+      const tempContainer = document.createElement('div');
+      tempContainer.id = 'temp-cv-preview';
+      tempContainer.style.position = 'absolute';
+      tempContainer.style.left = '-9999px';
+      tempContainer.style.top = '0';
+      tempContainer.style.width = '210mm';
+      tempContainer.style.minHeight = '297mm';
+      tempContainer.style.backgroundColor = '#ffffff';
+      tempContainer.style.zIndex = '-1000';
+      tempContainer.style.visibility = 'hidden';
+      
+      // Add the HTML content
+      tempContainer.innerHTML = renderCVHTML(cvData);
+      document.body.appendChild(tempContainer);
+      
+      // Update the element variable and preview ID
+      const newElement = tempContainer;
+      isTemporaryElement = true;
+      previewElementId = 'temp-cv-preview';
+      
+      console.log('Temporary preview element created');
+      
+      // Use the temporary element for PDF generation
+      return await generatePDFFromElement(newElement, cvData, isTemporaryElement);
     }
 
-    console.log('Starting PDF export...', { 
+    // Use the existing element
+    return await generatePDFFromElement(element, cvData, isTemporaryElement);
+  } catch (error) {
+    console.error('Error exporting to PDF:', error);
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+    throw new Error(`Failed to export PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}
+
+async function generatePDFFromElement(element: HTMLElement, cvData: CVData, isTemporaryElement: boolean): Promise<void> {
+  try {
+
+    console.log('Starting PDF generation...', { 
       element, 
       scrollHeight: element.scrollHeight, 
       scrollWidth: element.scrollWidth,
       offsetHeight: element.offsetHeight,
       offsetWidth: element.offsetWidth,
       clientHeight: element.clientHeight,
-      clientWidth: element.clientWidth
+      clientWidth: element.clientWidth,
+      isTemporaryElement
     });
 
     // Wait longer for any pending renders and ensure all CSS is loaded
@@ -65,7 +108,9 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
       if (element.scrollHeight === 0 || element.scrollWidth === 0) {
         throw new Error('CV preview element has no content or zero dimensions. Make sure the CV form is filled out and visible.');
       }
-    }    // Create canvas from the CV preview element
+    }
+
+    // Create canvas from the CV preview element
     console.log('About to create canvas with html2canvas...');
     const canvas = await html2canvas(element, {
       scale: 3, // Higher scale for better quality
@@ -98,12 +143,13 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
       },
       onclone: (clonedDoc) => {
         // Remove any problematic elements in cloned document
-        const clonedElement = clonedDoc.getElementById(previewElementId);
+        const clonedElement = clonedDoc.getElementById(element.id);
         if (clonedElement) {
           // Remove any elements that might cause issues
           const problematicElements = clonedElement.querySelectorAll('iframe, embed, object, video, script, noscript');
           problematicElements.forEach(el => el.remove());
-            // Force all colors to be RGB and handle CSS variables
+
+          // Force all colors to be RGB and handle CSS variables
           const allElements = clonedElement.querySelectorAll('*');
           allElements.forEach(el => {
             const styles = window.getComputedStyle(el);
@@ -130,7 +176,8 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
               // For named colors and other formats, use default
               return defaultColor;
             };
-              // Preserve all computed styles as inline styles for better PDF rendering
+
+            // Preserve all computed styles as inline styles for better PDF rendering
             const computedStyles = {
               color: getSafeColor(styles.color, '#374151'),
               backgroundColor: getSafeColor(styles.backgroundColor, 'transparent'),
@@ -157,7 +204,6 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
               justifyContent: styles.justifyContent as any,
               alignItems: styles.alignItems as any,
               gap: styles.gap,
-              // Additional layout properties for better PDF rendering
               width: styles.width,
               height: styles.height,
               minWidth: styles.minWidth,
@@ -219,7 +265,9 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
                 });
               }
             }
-          });            // Ensure the root element has proper styling
+          });
+
+          // Ensure the root element has proper styling
           clonedElement.style.backgroundColor = '#ffffff';
           clonedElement.style.color = '#374151';
           clonedElement.style.padding = '32px'; // Ensure padding is preserved (p-8 = 2rem = 32px)
@@ -257,7 +305,9 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
       }
     });
 
-    console.log('Canvas created successfully', { width: canvas.width, height: canvas.height });    // Create PDF with higher quality settings
+    console.log('Canvas created successfully', { width: canvas.width, height: canvas.height });
+
+    // Create PDF with higher quality settings
     const imgData = canvas.toDataURL('image/png', 1.0); // Maximum quality
     console.log('Image data created, length:', imgData.length);
     
@@ -280,7 +330,8 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
 
     console.log('Adding image to PDF...', { imgWidth, imgHeight, pageHeight, canvasHeight: canvas.height, canvasWidth: canvas.width });
 
-    // Add first page with better quality settings    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST'); // Use FAST compression for better quality
+    // Add first page with better quality settings
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight, '', 'FAST'); // Use FAST compression for better quality
     heightLeft -= pageHeight;
 
     // Add additional pages if needed
@@ -296,10 +347,12 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
     console.log('Saving PDF with filename:', fileName);
     pdf.save(fileName);
     console.log('PDF export completed successfully');
-  } catch (error) {
-    console.error('Error exporting to PDF:', error);
-    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
-    throw new Error(`Failed to export PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  } finally {
+    // Clean up temporary element if created
+    if (isTemporaryElement && element.parentNode) {
+      element.parentNode.removeChild(element);
+      console.log('Temporary element cleaned up');
+    }
   }
 }
 
