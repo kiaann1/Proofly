@@ -706,23 +706,113 @@ export async function exportCoverLetterToPDF(letterContent: string, fileName: st
     console.log('Starting cover letter PDF export...', element);
 
     // Wait a bit for any pending renders
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
-    // Create canvas from the cover letter preview element
-    const canvas = await html2canvas(element, {
-      scale: 2, // Higher resolution
-      useCORS: true,
-      allowTaint: false,
-      backgroundColor: '#ffffff',
-      height: element.scrollHeight,
-      width: element.scrollWidth,
-      logging: false, // Disable console logs
-      removeContainer: true,
-    });
+    let canvas;
+    try {
+      // Try the advanced HTML-to-canvas approach first
+      canvas = await html2canvas(element, {
+        scale: 2.5, // Higher resolution for better quality
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: '#ffffff',
+        height: element.scrollHeight,
+        width: element.scrollWidth,
+        logging: false, // Disable console logs
+        removeContainer: true,
+        foreignObjectRendering: false,
+        ignoreElements: (element) => {
+          // Skip elements that might cause issues
+          if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE' || element.tagName === 'NOSCRIPT') {
+            return true;
+          }
+          // Skip hidden elements
+          if (typeof window !== 'undefined') {
+            const styles = window.getComputedStyle(element);
+            if (styles.display === 'none' || styles.visibility === 'hidden' || styles.opacity === '0') {
+              return true;
+            }
+          }
+          return false;
+        },
+        onclone: (clonedDoc) => {
+          // Remove any problematic elements in cloned document
+          const clonedElement = clonedDoc.getElementById('cover-letter-preview');
+          if (clonedElement && typeof window !== 'undefined') {
+            // Remove any elements that might cause issues
+            const problematicElements = clonedElement.querySelectorAll('iframe, embed, object, video, script, noscript');
+            problematicElements.forEach(el => el.remove());
+
+            // Force all colors to be RGB and handle CSS variables
+            const allElements = clonedElement.querySelectorAll('*');
+            allElements.forEach(el => {
+              try {
+                const styles = window.getComputedStyle(el);
+                const htmlEl = el as HTMLElement;
+                
+                // Helper function to convert any color to a safe RGB value
+                const getSafeColor = (colorValue: string, defaultColor: string): string => {
+                  if (!colorValue || colorValue === 'transparent' || colorValue === 'inherit' || colorValue === 'initial') {
+                    return defaultColor;
+                  }
+                  
+                  // Convert CSS variables, oklch, lab, lch, and other modern color formats to RGB
+                  if (colorValue.includes('var(') || colorValue.includes('oklch') || 
+                      colorValue.includes('lab(') || colorValue.includes('lch(') ||
+                      colorValue.includes('color-mix(') || colorValue.includes('light-dark(')) {
+                    return defaultColor;
+                  }
+                  
+                  // If it's already RGB/RGBA or hex, keep it
+                  if (colorValue.match(/^(rgb|rgba|#)/)) {
+                    return colorValue;
+                  }
+                  
+                  // For named colors and other formats, use default
+                  return defaultColor;
+                };
+
+                // Apply safe colors and fonts
+                htmlEl.style.color = getSafeColor(styles.color, '#374151');
+                htmlEl.style.backgroundColor = getSafeColor(styles.backgroundColor, 'transparent');
+                htmlEl.style.borderColor = getSafeColor(styles.borderColor, '#d1d5db');
+                htmlEl.style.fontFamily = 'Georgia, serif';
+                
+                // Ensure specific styles for better PDF rendering
+                if (htmlEl.tagName === 'PRE') {
+                  htmlEl.style.whiteSpace = 'pre-wrap';
+                  htmlEl.style.wordBreak = 'break-word';
+                  htmlEl.style.fontFamily = 'Georgia, serif';
+                  htmlEl.style.fontSize = styles.fontSize || '14px';
+                  htmlEl.style.lineHeight = styles.lineHeight || '1.6';
+                  htmlEl.style.margin = '0';
+                  htmlEl.style.padding = '0';
+                }
+              } catch (error) {
+                // Ignore errors for individual elements
+                console.warn('Error processing element for PDF:', error);
+              }
+            });
+
+            // Ensure the root element has proper styling
+            clonedElement.style.backgroundColor = '#ffffff';
+            clonedElement.style.color = '#374151';
+            clonedElement.style.fontFamily = 'Georgia, serif';
+            clonedElement.style.lineHeight = '1.6';
+            clonedElement.style.overflow = 'visible';
+            clonedElement.style.position = 'relative';
+          }
+        }
+      });
+    } catch (canvasError) {
+      console.warn('HTML-to-canvas failed, falling back to text-based PDF:', canvasError);
+      // Fallback to text-based PDF generation
+      return generateTextBasedPDF(letterContent, fileName);
+    }
 
     console.log('Canvas created successfully', canvas.width, canvas.height);
 
-    // Create PDF
+    // Create PDF with proper margins
     const imgData = canvas.toDataURL('image/png');
     const pdf = new jsPDF({
       orientation: 'portrait',
@@ -730,31 +820,81 @@ export async function exportCoverLetterToPDF(letterContent: string, fileName: st
       format: 'a4',
     });
 
-    const imgWidth = 210; // A4 width in mm
-    const pageHeight = 295; // A4 height in mm
+    const pageWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const margin = 20; // 20mm margins
+    const imgWidth = pageWidth - (margin * 2); // Available width with margins
     const imgHeight = (canvas.height * imgWidth) / canvas.width;
     let heightLeft = imgHeight;
 
-    let position = 0;
+    let position = margin; // Start position with top margin
 
     // Add first page
-    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-    heightLeft -= pageHeight;
+    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+    heightLeft -= (pageHeight - (margin * 2));
 
     // Add additional pages if needed
     while (heightLeft >= 0) {
-      position = heightLeft - imgHeight;
+      position = heightLeft - imgHeight + margin;
       pdf.addPage();
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
+      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
+      heightLeft -= (pageHeight - (margin * 2));
     }
 
     // Download the PDF
     pdf.save(fileName);
   } catch (error) {
     console.error('Error exporting cover letter to PDF:', error);
+    
+    // Provide more specific error messages based on the error type
+    if (error instanceof Error) {
+      if (error.message.includes('oklch') || error.message.includes('color')) {
+        throw new Error('PDF export failed due to unsupported color formats. Please try again or contact support.');
+      } else if (error.message.includes('window')) {
+        throw new Error('PDF export is not available in this environment. Please try refreshing the page.');
+      } else if (error.message.includes('Canvas')) {
+        throw new Error('PDF export failed during image generation. Please try again.');
+      } else {
+        throw new Error(`PDF export failed: ${error.message}`);
+      }
+    }
+    
     throw new Error('Failed to export PDF. Please try again.');
   }
+}
+
+/**
+ * Fallback text-based PDF generation
+ */
+function generateTextBasedPDF(letterContent: string, fileName: string): void {
+  const pdf = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4',
+  });
+
+  const pageWidth = 210;
+  const pageHeight = 297;
+  const margin = 20;
+  const lineHeight = 5;
+  const fontSize = 11;
+  
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(fontSize);
+  
+  const lines = pdf.splitTextToSize(letterContent, pageWidth - (margin * 2));
+  let y = margin;
+  
+  lines.forEach((line: string) => {
+    if (y + lineHeight > pageHeight - margin) {
+      pdf.addPage();
+      y = margin;
+    }
+    pdf.text(line, margin, y);
+    y += lineHeight;
+  });
+  
+  pdf.save(fileName);
 }
 
 /**
@@ -762,36 +902,70 @@ export async function exportCoverLetterToPDF(letterContent: string, fileName: st
  */
 export async function exportCoverLetterToDOCX(
   letterContent: string, 
-  companyName: string = '',
-  position: string = '',
   fileName: string = 'cover_letter.docx'
 ): Promise<void> {
   try {
     const children: any[] = [];
 
-    // Split the letter content into paragraphs
+    // Split the letter content into paragraphs and handle spacing properly
     const paragraphs = letterContent.split('\n\n').filter(p => p.trim());
 
-    paragraphs.forEach((paragraph) => {
-      children.push(
-        new Paragraph({
-          children: [
-            new TextRun({
-              text: paragraph.trim(),
-              size: 24, // 12pt font
-            }),
-          ],
-          spacing: {
-            after: 240, // Space after paragraph
-          },
-        })
-      );
+    paragraphs.forEach((paragraph, index) => {
+      // Handle line breaks within paragraphs
+      const lines = paragraph.split('\n').filter(line => line.trim());
+      
+      if (lines.length === 1) {
+        // Single line paragraph
+        children.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: lines[0].trim(),
+                size: 24, // 12pt font
+                font: 'Times New Roman',
+              }),
+            ],
+            spacing: {
+              after: index === paragraphs.length - 1 ? 0 : 240, // Space after paragraph except last
+              line: 360, // 1.5 line spacing
+            },
+          })
+        );
+      } else {
+        // Multi-line paragraph (like addresses or lists)
+        lines.forEach((line, lineIndex) => {
+          children.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: line.trim(),
+                  size: 24, // 12pt font
+                  font: 'Times New Roman',
+                }),
+              ],
+              spacing: {
+                after: lineIndex === lines.length - 1 && index === paragraphs.length - 1 ? 0 : 120, // Smaller spacing for lines within paragraph
+                line: 360, // 1.5 line spacing
+              },
+            })
+          );
+        });
+      }
     });
 
     const doc = new Document({
       sections: [
         {
-          properties: {},
+          properties: {
+            page: {
+              margin: {
+                top: 1440, // 1 inch in twips
+                right: 1440,
+                bottom: 1440,
+                left: 1440,
+              },
+            },
+          },
           children: children,
         },
       ],

@@ -1,27 +1,49 @@
 /**
- * Main Navigation Component for Proofly
+ * Fully Responsive Main Navigation Component for Proofly
+ * Features: Mobile hamburger menu, tablet sidebar, desktop navigation
  */
 'use client';
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect } from 'react';
 import LoadingSpinner from '../ui/LoadingSpinner';
 
 export default function MainNavigation() {
   const pathname = usePathname();
   const router = useRouter();
   const [loadingRoute, setLoadingRoute] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const navItems = useMemo(() => [
-    { href: '/', label: 'Dashboard', icon: '🏠' },
-    { href: '/cv', label: 'CV Builder', icon: '📄' },
-    { href: '/ats', label: 'ATS Checker', icon: '🎯' },
-    { href: '/cover-letter', label: 'Cover Letter', icon: '💼' },
-    { href: '/blog', label: 'Career Tips', icon: '📝' },
+    { href: '/', label: 'Dashboard', icon: '🏠', description: 'Home and overview' },
+    { href: '/cv', label: 'CV Builder', icon: '📄', description: 'Create and edit your CV' },
+    { href: '/ats', label: 'ATS Checker', icon: '🎯', description: 'Check ATS compatibility' },
+    { href: '/cover-letter', label: 'Cover Letter', icon: '💼', description: 'Generate cover letters' },
+    { href: '/blog', label: 'Career Tips', icon: '📝', description: 'Expert career advice' },
   ], []);
 
-  const handleNavigation = useCallback((href: string, e: React.MouseEvent) => {
+  // Close mobile menu when pathname changes
+  useEffect(() => {
+    setMobileMenuOpen(false);
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Handle responsive behavior
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMobileMenuOpen(false);
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleNavigation = useCallback((href: string) => {
     if (href === pathname) return;
     
     // Show loading state
@@ -36,94 +58,187 @@ export default function MainNavigation() {
     }, 1000);
   }, [pathname, router]);
 
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(!mobileMenuOpen);
+    setSidebarOpen(false);
+  };
+
+  const toggleSidebar = () => {
+    setSidebarOpen(!sidebarOpen);
+    setMobileMenuOpen(false);
+  };
+
   return (
-    <nav className="bg-white/95 backdrop-blur-lg border-b border-gray-200/20 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-24">
-          {/* Logo */}
-          <Link 
-            href="/" 
-            className="flex items-center space-x-3 group"
-            prefetch={true}
-            aria-label="Proofly CV - Home"
-          >
-            <div className="relative w-30 h-10 bg-gradient-to-br from-blue-600 to-purple-700 rounded-xl flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform duration-200">
-              <span className="text-white font-bold text-lg">Proofly CV</span>
-              <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-blue-400 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
+    <>
+      {/* Desktop & Tablet Navigation Bar */}
+      <nav className="bg-white/95 backdrop-blur-lg border-b border-gray-200/20 sticky top-0 z-50 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16 lg:h-20">
+            
+            {/* Mobile hamburger & Tablet sidebar toggle */}
+            <div className="flex items-center lg:hidden">
+              <button
+                onClick={window.innerWidth >= 768 ? toggleSidebar : toggleMobileMenu}
+                className="inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                aria-label="Toggle navigation menu"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2} 
+                    d={mobileMenuOpen || sidebarOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} 
+                  />
+                </svg>
+              </button>
             </div>
 
-          </Link>
+            {/* Logo */}
+            <Link 
+              href="/" 
+              className="flex items-center space-x-2 group"
+              prefetch={true}
+              aria-label="Proofly CV - Home"
+            >
+              <div className="relative w-8 h-8 lg:w-10 lg:h-10 bg-gradient-to-br from-blue-600 to-purple-700 rounded-lg flex items-center justify-center shadow-lg transform group-hover:scale-105 transition-transform duration-200">
+                <span className="text-white font-bold text-sm lg:text-base">P</span>
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-br from-blue-400 to-purple-500 opacity-0 group-hover:opacity-20 transition-opacity duration-200"></div>
+              </div>
+              <span className="font-bold text-lg lg:text-xl text-gray-900 group-hover:text-blue-600 transition-colors">
+                Proofly CV
+              </span>
+            </Link>
 
-          {/* Navigation Links */}
-          <div className="hidden md:flex items-center space-x-1">
-            {navItems.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                prefetch={true}
-                aria-label={`Navigate to ${item.label}`}
-                onClick={(e) => handleNavigation(item.href, e)}
-                className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
-                  pathname === item.href
-                    ? 'bg-blue-50 text-blue-700 shadow-sm'
-                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
-              >
-                {loadingRoute === item.href ? (
-                  <LoadingSpinner size="sm" color="blue" />
-                ) : (
-                  <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>
-                )}
-                <span>{item.label}</span>
-              </Link>
-            ))}
-          </div>
+            {/* Desktop Navigation Links */}
+            <div className="hidden lg:flex items-center space-x-1">
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  prefetch={true}
+                  aria-label={`Navigate to ${item.label}`}
+                  onClick={() => handleNavigation(item.href)}
+                  className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                    pathname === item.href
+                      ? 'bg-blue-50 text-blue-700 shadow-sm'
+                      : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                  } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
+                >
+                  {loadingRoute === item.href ? (
+                    <LoadingSpinner size="sm" color="blue" />
+                  ) : (
+                    <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>
+                  )}
+                  <span>{item.label}</span>
+                </Link>
+              ))}
+            </div>
 
-          {/* Right Side Actions */}
-          <div className="flex items-center space-x-3">
-            {/* Get Started Button (only on homepage) */}
-            {pathname === '/' && (
-              <Link
-                href="/cv"
-                prefetch={true}
-                aria-label="Get Started with CV Builder"
-                className="hidden sm:inline-flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-              >                Get Started
-                <svg className="w-4 h-4 ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" suppressHydrationWarning>
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
-              </Link>
-            )}
+            {/* Right Side Actions */}
+            <div className="flex items-center space-x-3">
+              {/* Get Started Button */}
+              {pathname === '/' && (
+                <Link
+                  href="/cv"
+                  prefetch={true}
+                  aria-label="Get Started with CV Builder"
+                  className="inline-flex items-center px-3 py-2 lg:px-4 lg:py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg lg:rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                >
+                  <span className="hidden sm:inline">Get Started</span>
+                  <span className="sm:hidden">Start</span>
+                  <svg className="w-4 h-4 ml-1 sm:ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                  </svg>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      </nav>
 
-      {/* Mobile Navigation */}
-      <div className="md:hidden border-t border-gray-200 bg-white/95 backdrop-blur-lg">
-        <div className="px-4 py-3 space-y-1">
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Dropdown Menu */}
+      <div className={`
+        fixed top-16 left-0 right-0 bg-white border-b border-gray-200 z-50 transform transition-transform duration-300 ease-in-out lg:hidden
+        ${mobileMenuOpen ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'}
+      `}>
+        <div className="px-4 py-3 space-y-1 max-h-96 overflow-y-auto">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               prefetch={true}
               aria-label={`Navigate to ${item.label}`}
-              onClick={(e) => handleNavigation(item.href, e)}
-              className={`flex items-center space-x-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              onClick={() => handleNavigation(item.href)}
+              className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
                 pathname === item.href
-                  ? 'bg-blue-50 text-blue-700'
+                  ? 'bg-blue-50 text-blue-700 border border-blue-200'
                   : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
               } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
             >
               {loadingRoute === item.href ? (
                 <LoadingSpinner size="sm" color="blue" />
               ) : (
-                <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>
+                <span className="text-xl" role="img" aria-label={item.label}>{item.icon}</span>
               )}
-              <span>{item.label}</span>
+              <div className="flex-1">
+                <div className="font-medium">{item.label}</div>
+                <div className="text-xs text-gray-500">{item.description}</div>
+              </div>
             </Link>
           ))}
         </div>
       </div>
-    </nav>
+
+      {/* Tablet Sidebar Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Tablet Sidebar */}
+      <div className={`
+        fixed top-16 left-0 bottom-0 w-80 bg-white border-r border-gray-200 z-50 transform transition-transform duration-300 ease-in-out hidden md:block lg:hidden
+        ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        <div className="p-4 h-full overflow-y-auto">
+          <div className="space-y-2">
+            {navItems.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                prefetch={true}
+                aria-label={`Navigate to ${item.label}`}
+                onClick={() => handleNavigation(item.href)}
+                className={`group flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
+                  pathname === item.href
+                    ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-200'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
+                } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
+              >
+                {loadingRoute === item.href ? (
+                  <LoadingSpinner size="sm" color="blue" />
+                ) : (
+                  <span className="text-xl" role="img" aria-label={item.label}>{item.icon}</span>
+                )}
+                <div className="flex-1">
+                  <div className="font-medium">{item.label}</div>
+                  <div className="text-xs text-gray-500">{item.description}</div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

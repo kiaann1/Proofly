@@ -1,7 +1,4 @@
-/**
- * Cover Letter Writer Page
- * Generates personalised cover letters based on CV data and job descriptions
- */
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -235,6 +232,9 @@ export default function CoverLetterPage() {
   const [activeTab, setActiveTab] = useState<'templates' | 'input' | 'preview'>('templates');
   const [selectedTemplate, setSelectedTemplate] = useState<CoverLetterTemplate | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isEditingTemplate, setIsEditingTemplate] = useState(false);
+  const [editableTemplate, setEditableTemplate] = useState('');
+  
   useEffect(() => {
     const data = cvStorage.getCVData();
     setCvData(data);
@@ -249,18 +249,53 @@ export default function CoverLetterPage() {
 
   const handleTemplateSelect = (template: CoverLetterTemplate) => {
     setSelectedTemplate(template);
+    setEditableTemplate(template.template);
+    setIsEditingTemplate(false);
     setActiveTab('input');
   };
+
+  const startEditingTemplate = () => {
+    if (selectedTemplate) {
+      setEditableTemplate(selectedTemplate.template);
+      setIsEditingTemplate(true);
+    }
+  };
+
+  const saveTemplateEdit = () => {
+    if (selectedTemplate) {
+      // Create a temporary modified template
+      const modifiedTemplate = {
+        ...selectedTemplate,
+        template: editableTemplate
+      };
+      setSelectedTemplate(modifiedTemplate);
+      setIsEditingTemplate(false);
+      
+      // Regenerate the letter with the edited template if data is available
+      if (coverLetterData.companyName && coverLetterData.position) {
+        setTimeout(() => {
+          const letter = generateFromTemplate();
+          setCoverLetterData(prev => ({
+            ...prev,
+            generatedLetter: letter
+          }));
+        }, 100);
+      }
+    }
+  };
+
+  const cancelTemplateEdit = () => {
+    if (selectedTemplate) {
+      setEditableTemplate(selectedTemplate.template);
+    }
+    setIsEditingTemplate(false);
+  };
+
   const handleInputChange = (field: keyof CoverLetterData, value: string) => {
     setCoverLetterData(prev => ({
       ...prev,
       [field]: value
     }));
-  };
-
-  const applyTemplate = (template: CoverLetterTemplate) => {
-    setSelectedTemplate(template);
-    setActiveTab('input');
   };
 
   const generateFromTemplate = () => {
@@ -269,7 +304,8 @@ export default function CoverLetterPage() {
     const { personalInfo, experience, skills } = cvData;
     const { companyName, position, recipientName } = coverLetterData;
     
-    let letter = selectedTemplate.template;
+    // Use edited template if available, otherwise use original
+    let letter = editableTemplate || selectedTemplate.template;
     
     // Replace placeholders with actual data
     letter = letter.replace(/\[RECIPIENT\]/g, recipientName || 'Hiring Manager');
@@ -280,15 +316,24 @@ export default function CoverLetterPage() {
     letter = letter.replace(/\[TECHNICAL_SKILLS\]/g, skills.slice(0, 3).join(', ') || '[Technical Skills]');
     letter = letter.replace(/\[YEARS\]/g, experience.length > 0 ? experience.length.toString() : '[X]');
     
-    // Add contact information
-    if (personalInfo.email) {
-      letter += `\n\n${personalInfo.email}`;
+    // Add proper formatting and contact information
+    const currentDate = new Date().toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    let formattedLetter = `${currentDate}\n\n${letter}`;
+    
+    // Add contact information at the end if not already included
+    if (personalInfo.email && !letter.includes(personalInfo.email)) {
+      formattedLetter += `\n\n${personalInfo.email}`;
     }
-    if (personalInfo.phone) {
-      letter += `\n${personalInfo.phone}`;
+    if (personalInfo.phone && !letter.includes(personalInfo.phone)) {
+      formattedLetter += `\n${personalInfo.phone}`;
     }
     
-    return letter;
+    return formattedLetter;
   };
   const generateCoverLetter = async () => {
     if (!cvData) {
@@ -378,34 +423,40 @@ ${personalInfo.email}
 ${personalInfo.phone}`;
   };
 
-  const downloadCoverLetter = () => {
-    const element = document.createElement('a');
-    const file = new Blob([coverLetterData.generatedLetter], { type: 'text/plain' });
-    element.href = URL.createObjectURL(file);
-    element.download = `${coverLetterData.companyName}_${coverLetterData.position}_cover_letter.txt`;
-    document.body.appendChild(element);
-    element.click();
-    document.body.removeChild(element);
-  };
+
   const exportCoverLetter = async (format: 'pdf' | 'docx') => {
     if (!coverLetterData.generatedLetter) return;
 
     try {
       const fileName = `${coverLetterData.companyName || 'Company'}_${coverLetterData.position || 'Position'}_cover_letter.${format}`;
       
+      // Format the letter with proper spacing and structure for export
+      const formattedLetter = formatLetterForExport(coverLetterData.generatedLetter);
+      
       if (format === 'pdf') {
-        await exportCoverLetterToPDF(coverLetterData.generatedLetter, fileName);
+        await exportCoverLetterToPDF(formattedLetter, fileName);
       } else if (format === 'docx') {
         await exportCoverLetterToDOCX(
-          coverLetterData.generatedLetter, 
-          coverLetterData.companyName, 
-          coverLetterData.position,
+          formattedLetter,
           fileName
         );
       }    } catch (error) {
       console.error('Error exporting cover letter:', error);
       alert('Failed to export cover letter. Please try again.');
     }
+  };
+
+  const formatLetterForExport = (letter: string): string => {
+    // Ensure proper spacing and formatting for professional appearance
+    let formatted = letter.trim();
+    
+    // Add proper line breaks and spacing
+    formatted = formatted
+      .replace(/\n\n\n+/g, '\n\n') // Remove excessive line breaks
+      .replace(/^\s+/gm, '') // Remove leading spaces from lines
+      .replace(/\s+$/gm, ''); // Remove trailing spaces from lines
+    
+    return formatted;
   };
 
   if (!cvData) {
@@ -427,79 +478,91 @@ ${personalInfo.phone}`;
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Cover Letter Writer</h1>
-          <p className="text-gray-600">Generate personalised cover letters based on your CV and job requirements</p>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+        {/* Header - Responsive */}
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
+            Cover Letter Writer
+          </h1>
+          <p className="text-sm sm:text-base text-gray-600 max-w-2xl">
+            Generate personalised cover letters based on your CV and job requirements
+          </p>
         </div>
 
-        {/* Tab Navigation */}
-        <div className="flex border-b border-gray-200 mb-8">
-          <button
-            onClick={() => setActiveTab('templates')}
-            className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'templates'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Templates
-          </button>
-          <button
-            onClick={() => setActiveTab('input')}
-            className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'input'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Job Details
-          </button>
-          <button
-            onClick={() => setActiveTab('preview')}
-            className={`px-6 py-3 font-medium text-sm border-b-2 transition-colors ${
-              activeTab === 'preview'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            Generated Letter
-          </button>
+        {/* Tab Navigation - Mobile Responsive */}
+        <div className="flex overflow-x-auto border-b border-gray-200 mb-6 sm:mb-8 -mx-4 px-4 sm:mx-0 sm:px-0">
+          <div className="flex min-w-max">
+            <button
+              onClick={() => setActiveTab('templates')}
+              className={`px-4 sm:px-6 py-3 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'templates'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Templates
+            </button>
+            <button
+              onClick={() => setActiveTab('input')}
+              className={`px-4 sm:px-6 py-3 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'input'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Job Details
+            </button>
+            <button
+              onClick={() => setActiveTab('preview')}
+              className={`px-4 sm:px-6 py-3 font-medium text-xs sm:text-sm border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === 'preview'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}
+            >
+              Generated Letter
+            </button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2">
+        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6 lg:gap-8">
+          {/* Main Content - Responsive */}
+          <div className="xl:col-span-3">
             {activeTab === 'templates' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Cover Letter Templates</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+                <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4 sm:mb-6">
+                  Cover Letter Templates
+                </h2>
                 
-                <div className="mb-4">
+                <div className="mb-4 sm:mb-6">
                   <input
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
                     placeholder="Search templates by title or category..."
                   />
                 </div>
 
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {filteredTemplates.length > 0 ? (
                     filteredTemplates.map((template) => (
                       <div
                         key={template.id}
-                        className="p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                        className="p-3 sm:p-4 rounded-lg border border-gray-200 bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
                         onClick={() => handleTemplateSelect(template)}
                       >
-                        <h3 className="text-lg font-semibold text-gray-900">{template.title}</h3>
-                        <p className="text-sm text-gray-600">{template.description}</p>
-                        <div className="flex flex-wrap gap-2 mt-2">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900">
+                          {template.title}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-gray-600 mt-1">
+                          {template.description}
+                        </p>
+                        <div className="flex flex-wrap gap-1 sm:gap-2 mt-2">
                           {template.keywords.map((keyword) => (
                             <span
                               key={keyword}
-                              className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
+                              className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800"
                             >
                               {keyword}
                             </span>
@@ -508,40 +571,85 @@ ${personalInfo.phone}`;
                       </div>
                     ))
                   ) : (
-                    <div className="text-center py-12">
-                      <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <div className="text-center py-8 sm:py-12">
+                      <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                       </svg>
                       <h3 className="mt-2 text-sm font-medium text-gray-900">No templates found</h3>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <p className="mt-1 text-xs sm:text-sm text-gray-500">
                         Try adjusting your search criteria or create a new template.
                       </p>
                     </div>
                   )}
                 </div>
               </div>
-            )}            {activeTab === 'input' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Job Information</h2>
+            )}
+
+            {activeTab === 'input' && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Job Information</h2>
                   {selectedTemplate && (
-                    <div className="flex items-center space-x-2">
-                      <span className="text-sm text-gray-500">Using template:</span>
-                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800 font-medium">
-                        {selectedTemplate.title}
-                      </span>
-                      <button
-                        onClick={() => setSelectedTemplate(null)}
-                        className="text-red-500 hover:text-red-700 text-sm"
-                      >
-                        ✕ Remove
-                      </button>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <span className="text-xs sm:text-sm text-gray-500">Using template:</span>
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs bg-blue-100 text-blue-800 font-medium">
+                          {selectedTemplate.title}
+                        </span>
+                        <button
+                          onClick={startEditingTemplate}
+                          className="text-blue-600 hover:text-blue-700 text-xs sm:text-sm"
+                        >
+                          ✏️ Edit
+                        </button>
+                        <button
+                          onClick={() => setSelectedTemplate(null)}
+                          className="text-red-500 hover:text-red-700 text-xs sm:text-sm"
+                        >
+                          ✕ Remove
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
                 
-                <div className="space-y-6">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Template Editor */}
+                {isEditingTemplate && selectedTemplate && (
+                  <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="flex justify-between items-center mb-3">
+                      <h3 className="text-sm font-medium text-blue-900">
+                        Edit Template: {selectedTemplate.title}
+                      </h3>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={saveTemplateEdit}
+                          className="px-3 py-1 bg-blue-600 text-white text-xs rounded hover:bg-blue-700"
+                        >
+                          Save Changes
+                        </button>
+                        <button
+                          onClick={cancelTemplateEdit}
+                          className="px-3 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                    <textarea
+                      value={editableTemplate}
+                      onChange={(e) => setEditableTemplate(e.target.value)}
+                      rows={12}
+                      className="w-full px-3 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-black font-mono"
+                      placeholder="Edit your template here. Use placeholders like [COMPANY], [POSITION], [RECIPIENT], [YOUR_NAME]..."
+                    />
+                    <p className="text-xs text-blue-700 mt-2">
+                      💡 Tip: Use placeholders like [COMPANY], [POSITION], [RECIPIENT], [YOUR_NAME], [CURRENT_ROLE], [TECHNICAL_SKILLS] that will be automatically replaced.
+                    </p>
+                  </div>
+                )}
+                
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">
                         Company Name *
@@ -550,7 +658,7 @@ ${personalInfo.phone}`;
                         type="text"
                         value={coverLetterData.companyName}
                         onChange={(e) => handleInputChange('companyName', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
                         placeholder="e.g., Google, Microsoft, Startup Inc."
                       />
                     </div>
@@ -563,7 +671,7 @@ ${personalInfo.phone}`;
                         type="text"
                         value={coverLetterData.position}
                         onChange={(e) => handleInputChange('position', e.target.value)}
-                        className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
                         placeholder="e.g., Senior Software Engineer"
                       />
                     </div>
@@ -577,40 +685,44 @@ ${personalInfo.phone}`;
                       type="text"
                       value={coverLetterData.recipientName}
                       onChange={(e) => handleInputChange('recipientName', e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
                       placeholder="e.g., Mr. Smith, Mrs Johnson"
                     />
-                    <p className="text-sm text-gray-500 mt-1">
-                      If you know the hiring manager's name, enter it here. Otherwise, we'll use "Dear Hiring Manager"
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                      If you know the hiring manager&apos;s name, enter it here. Otherwise, we&apos;ll use &ldquo;Dear Hiring Manager&rdquo;
                     </p>
-                  </div>                  <div>
+                  </div>
+
+                  <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Job Description {!selectedTemplate && '*'}
                     </label>
                     <textarea
                       value={coverLetterData.jobDescription}
                       onChange={(e) => handleInputChange('jobDescription', e.target.value)}
-                      rows={8}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black"
+                      rows={6}
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
                       placeholder={selectedTemplate 
                         ? "Optional: Add job description for more personalization..." 
                         : "Paste the full job description here. Include requirements, responsibilities, and company information..."
                       }
                     />
-                    <p className="text-sm text-gray-500 mt-1">
+                    <p className="text-xs sm:text-sm text-gray-500 mt-1">
                       {selectedTemplate 
                         ? "When using a template, the job description is optional but helps with personalization."
                         : "The more detailed the job description, the better we can tailor your cover letter"
                       }
                     </p>
-                  </div>                  <button
+                  </div>
+
+                  <button
                     onClick={generateCoverLetter}
                     disabled={isGenerating || !coverLetterData.companyName || !coverLetterData.position || (!selectedTemplate && !coverLetterData.jobDescription)}
-                    className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                    className="w-full bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors text-sm sm:text-base"
                   >
                     {isGenerating ? (
                       <span className="flex items-center justify-center">
-                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <svg className="animate-spin -ml-1 mr-3 h-4 w-4 sm:h-5 sm:w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
@@ -627,57 +739,87 @@ ${personalInfo.phone}`;
             )}
 
             {activeTab === 'preview' && (
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Generated Cover Letter</h2>
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 lg:p-8">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4 sm:mb-6">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Generated Cover Letter</h2>
                   {coverLetterData.generatedLetter && (
-                    <div className="flex gap-2">
-                      <button
-                        onClick={downloadCoverLetter}
-                        className="inline-flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm"
-                      >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                        Download TXT
-                      </button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {selectedTemplate && (
+                        <button
+                          onClick={() => {
+                            setActiveTab('input');
+                            startEditingTemplate();
+                          }}
+                          className="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors text-xs sm:text-sm"
+                        >
+                          <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                          </svg>
+                          <span className="hidden sm:inline">Edit Template</span>
+                          <span className="sm:hidden">Edit</span>
+                        </button>                      )}
+
                       <button
                         onClick={() => exportCoverLetter('pdf')}
-                        className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                        className="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-xs sm:text-sm"
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        Export to PDF
+                        <span className="hidden sm:inline">Export to PDF</span>
+                        <span className="sm:hidden">PDF</span>
                       </button>
                       <button
                         onClick={() => exportCoverLetter('docx')}
-                        className="inline-flex items-center px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-sm"
+                        className="inline-flex items-center justify-center px-3 sm:px-4 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors text-xs sm:text-sm"
                       >
-                        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                         </svg>
-                        Export to DOCX
+                        <span className="hidden sm:inline">Export to DOCX</span>
+                        <span className="sm:hidden">DOCX</span>
                       </button>
                     </div>
                   )}
                 </div>
-                  {coverLetterData.generatedLetter ? (
+
+                {coverLetterData.generatedLetter ? (
                   <div id="cover-letter-preview" className="prose prose-gray max-w-none">
-                    <div className="bg-white border border-gray-200 rounded-lg p-8 shadow-sm">
-                      <pre className="whitespace-pre-wrap font-sans text-gray-800 leading-relaxed">
-                        {coverLetterData.generatedLetter}
+                    <div 
+                      className="bg-white border border-gray-200 rounded-lg p-6 sm:p-8 lg:p-12 shadow-sm" 
+                      style={{ 
+                        fontFamily: 'Georgia, serif',
+                        lineHeight: '1.6',
+                        maxWidth: '8.5in',
+                        margin: '0 auto',
+                        color: '#374151',
+                        backgroundColor: '#ffffff'
+                      }}
+                    >
+                      <pre 
+                        className="whitespace-pre-wrap leading-relaxed overflow-x-auto" 
+                        style={{
+                          fontFamily: 'Georgia, serif',
+                          margin: 0,
+                          color: '#374151',
+                          backgroundColor: 'transparent',
+                          border: 'none',
+                          fontSize: '14px',
+                          lineHeight: '1.6'
+                        }}
+                      >
+                        {formatLetterForExport(coverLetterData.generatedLetter)}
                       </pre>
                     </div>
                   </div>
                 ) : (
-                  <div className="text-center py-12">
-                    <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <div className="text-center py-8 sm:py-12">
+                    <svg className="mx-auto h-10 w-10 sm:h-12 sm:w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                     </svg>
                     <h3 className="mt-2 text-sm font-medium text-gray-900">No cover letter generated</h3>
-                    <p className="mt-1 text-sm text-gray-500">
-                      Fill out the job details and click "Generate Cover Letter" to get started.
+                    <p className="mt-1 text-xs sm:text-sm text-gray-500">
+                      Fill out the job details and click &ldquo;Generate Cover Letter&rdquo; to get started.
                     </p>
                   </div>
                 )}
@@ -685,16 +827,18 @@ ${personalInfo.phone}`;
             )}
           </div>
 
-          {/* CV Summary Sidebar */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sticky top-8">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Your CV Summary</h3>
+          {/* CV Summary Sidebar - Responsive */}
+          <div className="xl:col-span-1">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 sm:p-6 xl:sticky xl:top-8">
+              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
+                Your CV Summary
+              </h3>
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 mb-1">Personal Info</h4>
                   <p className="text-sm text-gray-600">{cvData.personalInfo.name}</p>
-                  <p className="text-sm text-gray-600">{cvData.personalInfo.email}</p>
+                  <p className="text-sm text-gray-600 break-all">{cvData.personalInfo.email}</p>
                 </div>
 
                 <div>
@@ -718,15 +862,21 @@ ${personalInfo.phone}`;
                         {skill}
                       </span>
                     ))}
+                    {cvData.skills.length === 0 && (
+                      <span className="text-xs text-gray-500">No skills added yet</span>
+                    )}
                   </div>
                 </div>
 
-                <div className="pt-4 border-t border-gray-200">
+                <div className="pt-3 sm:pt-4 border-t border-gray-200">
                   <a
                     href="/cv"
-                    className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                    className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center"
                   >
-                    Edit CV →
+                    Edit CV
+                    <svg className="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
                   </a>
                 </div>
               </div>

@@ -58,23 +58,24 @@ export default function BlogPage() {
   return (
     <AppLayout>
       <div className="min-h-screen bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">          {/* Header */}
-          <div className="text-center mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
+          {/* Header - Responsive */}
+          <div className="text-center mb-8 sm:mb-12 lg:mb-16">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6">
               Resume & Career Blog
             </h1>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto px-4">
               Expert tips, strategies, and insights to help you land your dream job. 
-              From ATS optimisation to interview mastery, we've got you covered.
+              From ATS optimisation to interview mastery, we&apos;ve got you covered.
             </p>
           </div>
 
-          {/* Category Filter */}
-          <section className="mb-12">
-            <div className="flex flex-wrap justify-center gap-3">
+          {/* Category Filter - Mobile Responsive */}
+          <section className="mb-8 sm:mb-10 lg:mb-12">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3">
               <button
                 onClick={() => setSelectedCategory('all')}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${
                   selectedCategory === 'all'
                     ? 'bg-blue-600 text-white shadow-lg'
                     : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -86,7 +87,7 @@ export default function BlogPage() {
                 <button
                   key={key}
                   onClick={() => setSelectedCategory(key)}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  className={`px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-200 ${
                     selectedCategory === key
                       ? 'bg-blue-600 text-white shadow-lg'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
@@ -96,38 +97,44 @@ export default function BlogPage() {
                 </button>
               ))}
             </div>
-          </section>          {/* All Blog Posts */}
-          <section className="mb-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-8">
+          </section>
+
+          {/* All Blog Posts - Responsive Grid */}
+          <section className="mb-12 sm:mb-16">
+            <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-6 sm:mb-8">
               {selectedCategory === 'all' ? 'All Posts' : `${categories[selectedCategory]?.name || 'Articles'}`}
-              <span className="text-gray-500 font-normal text-lg ml-2">
+              <span className="text-gray-500 font-normal text-base sm:text-lg ml-2">
                 ({filteredPosts.length} {filteredPosts.length === 1 ? 'article' : 'articles'})
               </span>
             </h2>
             
             {filteredPosts.length === 0 ? (
-              <div className="text-center py-12">
-                <p className="text-gray-500 text-lg">No articles found in this category.</p>
+              <div className="text-center py-8 sm:py-12">
+                <p className="text-gray-500 text-base sm:text-lg">No articles found in this category.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
                 {filteredPosts.map((post) => (
                   <article
                     key={post.id}
                     className="bg-white rounded-xl shadow-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300"
-                  >                    <div className="p-8">                      <div className="flex items-center gap-3 mb-4">
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${categories[post.category]?.color || 'bg-gray-100 text-gray-800'}`}>
+                  >
+                    <div className="p-4 sm:p-6 lg:p-8">
+                      <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
+                        <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-medium ${categories[post.category]?.color || 'bg-gray-100 text-gray-800'}`}>
                           {categories[post.category]?.name || post.category}
                         </span>
                       </div>
-                      <h3 className="text-xl font-bold text-gray-900 mb-4 hover:text-blue-600 transition-colors">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-3 sm:mb-4 hover:text-blue-600 transition-colors">
                         <Link href={`/blog/${post.id}`}>
                           {post.title}
                         </Link>
                       </h3>
-                      <p className="text-gray-600 mb-6 line-clamp-3">{post.excerpt}</p>
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center text-sm text-gray-500">
+                      <p className="text-gray-600 mb-4 sm:mb-6 line-clamp-3 text-sm sm:text-base">
+                        {post.excerpt}
+                      </p>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+                        <div className="flex items-center text-xs sm:text-sm text-gray-500">
                           <span>{post.readTime} min read</span>
                           <span className="mx-2">•</span>
                           <span>{new Date(post.publishDate).toLocaleDateString('en-GB', { 
@@ -138,7 +145,7 @@ export default function BlogPage() {
                         </div>
                         <Link
                           href={`/blog/${post.id}`}
-                          className="text-blue-600 hover:text-blue-700 font-medium text-sm"
+                          className="text-blue-600 hover:text-blue-700 font-medium text-xs sm:text-sm self-start sm:self-auto"
                         >
                           Read Post →
                         </Link>
@@ -150,15 +157,17 @@ export default function BlogPage() {
             )}
           </section>
 
-          {/* CTA Section */}
-          <section className="mt-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 text-center text-white">
-            <h2 className="text-3xl font-bold mb-4">Ready to Build Your Perfect Resume?</h2>
-            <p className="text-lg mb-6 opacity-90">
+          {/* CTA Section - Responsive */}
+          <section className="mt-12 sm:mt-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl lg:rounded-2xl p-6 sm:p-8 text-center text-white">
+            <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4">
+              Ready to Build Your Perfect Resume?
+            </h2>
+            <p className="text-sm sm:text-base lg:text-lg mb-4 sm:mb-6 opacity-90">
               Put these tips into action with our free, professional CV builder
             </p>
             <Link
               href="/cv"
-              className="inline-block bg-white text-blue-600 px-8 py-3 rounded-xl font-semibold hover:bg-gray-100 transition-colors"
+              className="inline-block bg-white text-blue-600 px-6 sm:px-8 py-2 sm:py-3 rounded-lg sm:rounded-xl font-semibold hover:bg-gray-100 transition-colors text-sm sm:text-base"
             >
               Start Building Your CV
             </Link>

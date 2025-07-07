@@ -12,21 +12,6 @@
   "categories": ["productivity", "business", "utilities"],
   "icons": [
     {
-      "src": "/favicon-16x16.png",
-      "sizes": "16x16",
-      "type": "image/png"
-    },
-    {
-      "src": "/favicon-32x32.png",
-      "sizes": "32x32",
-      "type": "image/png"
-    },
-    {
-      "src": "/apple-touch-icon.png",
-      "sizes": "180x180",
-      "type": "image/png"
-    },
-    {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png",
@@ -45,21 +30,21 @@
       "short_name": "CV Builder",
       "description": "Create a new CV",
       "url": "/cv",
-      "icons": [{"src": "/favicon-32x32.png", "sizes": "32x32"}]
+      "icons": [{"src": "/android-chrome-192x192.png", "sizes": "192x192"}]
     },
     {
       "name": "ATS Checker",
       "short_name": "ATS Check",
       "description": "Check CV for ATS compatibility",
       "url": "/ats",
-      "icons": [{"src": "/favicon-32x32.png", "sizes": "32x32"}]
+      "icons": [{"src": "/android-chrome-192x192.png", "sizes": "192x192"}]
     },
     {
       "name": "Cover Letter",
       "short_name": "Cover Letter",
       "description": "Create a cover letter",
       "url": "/cover-letter",
-      "icons": [{"src": "/favicon-32x32.png", "sizes": "32x32"}]
+      "icons": [{"src": "/android-chrome-192x192.png", "sizes": "192x192"}]
     }
   ],
   "prefer_related_applications": false,
