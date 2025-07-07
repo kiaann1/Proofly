@@ -40,6 +40,7 @@ export default function MainNavigation() {
     };
 
     if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
