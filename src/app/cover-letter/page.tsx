@@ -539,7 +539,7 @@ ${personalInfo.phone}`;
                     type="text"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base"
+                    className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                     placeholder="Search templates by title or category..."
                   />
                 </div>
@@ -639,7 +639,7 @@ ${personalInfo.phone}`;
                       value={editableTemplate}
                       onChange={(e) => setEditableTemplate(e.target.value)}
                       rows={12}
-                      className="w-full px-3 py-2 border border-blue-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-black font-mono"
+                      className="w-full px-3 py-2 border border-blue-300 dark:border-blue-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 text-sm font-mono"
                       placeholder="Edit your template here. Use placeholders like [COMPANY], [POSITION], [RECIPIENT], [YOUR_NAME]..."
                     />
                     <p className="text-xs text-blue-700 mt-2">
@@ -658,7 +658,7 @@ ${personalInfo.phone}`;
                         type="text"
                         value={coverLetterData.companyName}
                         onChange={(e) => handleInputChange('companyName', e.target.value)}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                         placeholder="e.g., Google, Microsoft, Startup Inc."
                       />
                     </div>
@@ -671,7 +671,7 @@ ${personalInfo.phone}`;
                         type="text"
                         value={coverLetterData.position}
                         onChange={(e) => handleInputChange('position', e.target.value)}
-                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
+                        className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                         placeholder="e.g., Senior Software Engineer"
                       />
                     </div>
@@ -685,7 +685,7 @@ ${personalInfo.phone}`;
                       type="text"
                       value={coverLetterData.recipientName}
                       onChange={(e) => handleInputChange('recipientName', e.target.value)}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                       placeholder="e.g., Mr. Smith, Mrs Johnson"
                     />
                     <p className="text-xs sm:text-sm text-gray-500 mt-1">
@@ -701,7 +701,7 @@ ${personalInfo.phone}`;
                       value={coverLetterData.jobDescription}
                       onChange={(e) => handleInputChange('jobDescription', e.target.value)}
                       rows={6}
-                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-black text-sm sm:text-base"
+                      className="w-full px-3 sm:px-4 py-2 sm:py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 dark:text-gray-100 bg-white dark:bg-gray-800 placeholder-gray-500 dark:placeholder-gray-400 text-sm sm:text-base"
                       placeholder={selectedTemplate 
                         ? "Optional: Add job description for more personalization..." 
                         : "Paste the full job description here. Include requirements, responsibilities, and company information..."

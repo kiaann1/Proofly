@@ -24,11 +24,22 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
     const element = document.getElementById(previewElementId);
     if (!element) {
       console.error(`Element with ID '${previewElementId}' not found`);
+      console.log('Available elements:', Array.from(document.querySelectorAll('[id]')).map(el => el.id));
       throw new Error(`Preview element with ID '${previewElementId}' not found`);
     }
 
-    console.log('Starting PDF export...', { element, scrollHeight: element.scrollHeight, scrollWidth: element.scrollWidth });    // Wait a bit for any pending renders
-    await new Promise(resolve => setTimeout(resolve, 100));
+    console.log('Starting PDF export...', { 
+      element, 
+      scrollHeight: element.scrollHeight, 
+      scrollWidth: element.scrollWidth,
+      offsetHeight: element.offsetHeight,
+      offsetWidth: element.offsetWidth,
+      clientHeight: element.clientHeight,
+      clientWidth: element.clientWidth
+    });
+
+    // Wait longer for any pending renders and ensure all CSS is loaded
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Validate element dimensions
     if (element.scrollHeight === 0 || element.scrollWidth === 0) {
@@ -36,9 +47,24 @@ export async function exportToPDF(cvData: CVData, previewElementId: string = 'cv
         scrollHeight: element.scrollHeight, 
         scrollWidth: element.scrollWidth,
         offsetHeight: element.offsetHeight,
-        offsetWidth: element.offsetWidth
+        offsetWidth: element.offsetWidth,
+        clientHeight: element.clientHeight,
+        clientWidth: element.clientWidth,
+        elementStyle: window.getComputedStyle(element),
+        innerHTML: element.innerHTML.substring(0, 200) + '...'
       });
-      throw new Error('CV preview element has no content or zero dimensions');
+      
+      // Try to force re-render
+      element.style.visibility = 'hidden';
+      element.offsetHeight; // Force reflow
+      element.style.visibility = 'visible';
+      
+      // Wait a bit more
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      if (element.scrollHeight === 0 || element.scrollWidth === 0) {
+        throw new Error('CV preview element has no content or zero dimensions. Make sure the CV form is filled out and visible.');
+      }
     }    // Create canvas from the CV preview element
     console.log('About to create canvas with html2canvas...');
     const canvas = await html2canvas(element, {

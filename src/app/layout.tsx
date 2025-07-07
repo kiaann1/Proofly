@@ -4,6 +4,7 @@ import "./globals.css";
 import MainNavigation from "../components/layout/MainNavigation";
 import GlobalFooter from "../components/layout/GlobalFooter";
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     'CV templates', 'free resume maker', 'professional CV', 'ATS friendly resume',
     'job application tools', 'career development', 'resume writing tips'
   ],
-  authors: [{ name: 'Proofly Team' }],
+  authors: [{ name: 'Proofly' }],
   creator: 'Proofly',
   publisher: 'Proofly',
   formatDetection: {
@@ -35,11 +36,11 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL('https://proofly.com'),
+  metadataBase: new URL('https://prooflycv.vercel.app/'),
   openGraph: {
     title: 'Proofly - Free Professional CV Builder & Resume Tools',
     description: 'Create professional resumes and CVs for free with our ATS-optimised builder. Features include grammar checking, cover letter generator, and expert career advice.',
-    url: 'https://proofly.com',
+    url: 'https://prooflycv.vercel.app/',
     siteName: 'Proofly',
     locale: 'en_US',
     type: 'website',
@@ -119,19 +120,19 @@ export default function RootLayout({
     "@graph": [
       {
         "@type": "WebSite",
-        "@id": "https://proofly.com/#website",
-        "url": "https://proofly.com/",
+        "@id": "https://prooflycv.vercel.app/#website",
+        "url": "https://prooflycv.vercel.app",
         "name": "Proofly",
         "description": "Free Professional CV Builder & Resume Tools",
         "publisher": {
-          "@id": "https://proofly.com/#organisation"
+          "@id": "https://prooflycv.vercel.app/#organisation"
         },
         "potentialAction": [
           {
             "@type": "SearchAction",
             "target": {
               "@type": "EntryPoint",
-              "urlTemplate": "https://proofly.com/search?q={search_term_string}"
+              "urlTemplate": "https://prooflycv.vercel.app/search?q={search_term_string}"
             },
             "query-input": "required name=search_term_string"
           }
@@ -139,21 +140,21 @@ export default function RootLayout({
       },
       {
         "@type": "Organisation",
-        "@id": "https://proofly.com/#organisation",
+        "@id": "https://prooflycv.vercel.app/#organisation",
         "name": "Proofly",
-        "url": "https://proofly.com/",
+        "url": "https://prooflycv.vercel.app",
         "logo": {
           "@type": "ImageObject",
           "inLanguage": "en-US",
-          "@id": "https://proofly.com/#/schema/logo/image/",
-          "url": "https://proofly.com/logo.png",
-          "contentUrl": "https://proofly.com/logo.png",
+          "@id": "https://prooflycv.vercel.app/#/schema/logo/image/",
+          "url": "https://prooflycv.vercel.app/logo.png",
+          "contentUrl": "https://prooflycv.vercel.app/logo.png",
           "width": 512,
           "height": 512,
           "caption": "Proofly"
         },
         "image": {
-          "@id": "https://proofly.com/#/schema/logo/image/"
+          "@id": "https://prooflycv.vercel.app/#/schema/logo/image/"
         },
         "description": "Free Professional CV Builder & Resume Tools",
         "sameAs": [
@@ -171,7 +172,7 @@ export default function RootLayout({
       {
         "@type": "WebApplication",
         "name": "Proofly CV Builder",
-        "url": "https://proofly.com/cv",
+        "url": "https://prooflycv.vercel.app/cv",
         "description": "Free online CV and resume builder with ATS optimisation",
         "applicationCategory": "BusinessApplication",
         "operatingSystem": "Any",
@@ -220,6 +221,7 @@ export default function RootLayout({
             },
           }}
         />
+        <Analytics />
       </body>
     </html>
   );

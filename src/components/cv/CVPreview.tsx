@@ -57,12 +57,23 @@ export default function CVPreview({ cvData, onTemplateChange, onStylingChange }:
   };
   const handleExportPDF = async () => {
     try {
-      console.log('Starting PDF export...');
+      console.log('Starting PDF export from CVPreview component...');
+      
+      // Ensure the preview element exists and has content
+      const previewElement = document.getElementById('cv-preview');
+      if (!previewElement) {
+        throw new Error('Preview element not found');
+      }
+      
+      if (previewElement.scrollHeight === 0 || previewElement.scrollWidth === 0) {
+        throw new Error('Preview element has no dimensions. Please ensure your CV has content.');
+      }
+      
       await exportToPDF(cvData, 'cv-preview');
-      console.log('PDF export completed successfully');
+      console.log('PDF export completed successfully from CVPreview');
     } catch (error) {
-      console.error('Error exporting PDF:', error);
-      alert(`Failed to export PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Error exporting PDF from CVPreview:', error);
+      alert(`Failed to export PDF: ${error instanceof Error ? error.message : 'Please ensure your CV has content and try again.'}`);
     }
   };
 

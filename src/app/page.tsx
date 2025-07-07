@@ -144,22 +144,7 @@ export default function Home() {
             </div>
 
             {/* Social Proof */}
-            <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-6 sm:gap-8 text-gray-500 px-4">
-              <div className="flex items-center">
-                <span className="text-2xl sm:text-3xl font-bold text-blue-600">10K+</span>
-                <span className="ml-2 text-sm">CVs Created</span>
-              </div>
-              <div className="w-px h-8 bg-gray-300 hidden sm:block"></div>
-              <div className="flex items-center">
-                <span className="text-2xl sm:text-3xl font-bold text-green-600">95%</span>
-                <span className="ml-2 text-sm">ATS Pass Rate</span>
-              </div>
-              <div className="w-px h-8 bg-gray-300 hidden sm:block"></div>
-              <div className="flex items-center">
-                <span className="text-2xl sm:text-3xl font-bold text-purple-600">4.9★</span>
-                <span className="ml-2 text-sm">User Rating</span>
-              </div>
-            </div>
+
           </div>
         </div>
       </section>
