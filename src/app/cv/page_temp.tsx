@@ -22,6 +22,7 @@ const defaultPersonalInfo: PersonalInfo = {
   github: '',
   portfolio: '',
   salaryExpectation: '',
+  showSalaryInCV: false,
   summary: '',
 };
 
@@ -93,6 +94,11 @@ export default function CVBuilderPage() {
 
   const handleTemplateChange = (template: CVTemplate) => {
     setCvData(prev => ({ ...prev, template }));
+  };
+
+  const handleStylingChange = (styling: any) => {
+    // Handle styling changes - this could be expanded based on requirements
+    console.log('Styling changed:', styling);
   };
 
   const handleExportPDF = async () => {
@@ -222,7 +228,7 @@ export default function CVBuilderPage() {
                 <CVForm cvData={cvData} onChange={handleCVDataChange} />
               )}
               {activeTab === 'preview' && (
-                <CVPreview cvData={cvData} onTemplateChange={handleTemplateChange} />
+                <CVPreview cvData={cvData} onTemplateChange={handleTemplateChange} onStylingChange={handleStylingChange} />
               )}
               {activeTab === 'ats' && (
                 <ATSChecker cvData={cvData} onChange={handleCVDataChange} />

@@ -1,19 +1,24 @@
 import { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import React from 'react';
+
+// Force dynamic rendering to avoid SSG issues
+export const dynamic = 'force-dynamic';
+
 import AppLayout from '../../../components/layout/AppLayout';
 import Link from 'next/link';
 import { getBlogPostById, getAllBlogPosts, getAllCategories, getRecentBlogPosts } from '../../../lib/blogUtils.server';
 
 interface BlogPostPageProps {
-  params: {
+  params: Promise<{
     slug: string;
-  };
+  }>;
 }
 
 // Generate metadata for SEO
 export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
-  const post = getBlogPostById(params.slug);
+  const { slug } = await params;
+  const post = getBlogPostById(slug);
 
   if (!post) {
     return {
@@ -72,8 +77,9 @@ export function generateStaticParams() {
   }));
 }
 
-export default function BlogPostPage({ params }: BlogPostPageProps) {
-  const post = getBlogPostById(params.slug);
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const { slug } = await params;
+  const post = getBlogPostById(slug);
   const categories = getAllCategories();
   const recentPosts = getRecentBlogPosts(3);
 
