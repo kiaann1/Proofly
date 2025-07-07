@@ -191,7 +191,11 @@ export default function ATSCheckerPage() {
             <ATSChecker 
               cvData={cvData} 
               onChange={handleCVDataChange}
-              onSwitchToForm={() => window.location.href = '/cv'}
+              onSwitchToForm={() => {
+                if (typeof window !== 'undefined') {
+                  window.location.href = '/cv';
+                }
+              }}
             />
           </div>
         </div>

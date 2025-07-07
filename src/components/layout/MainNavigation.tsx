@@ -33,14 +33,15 @@ export default function MainNavigation() {
   // Handle responsive behavior
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 1024) {
+      if (typeof window !== 'undefined' && window.innerWidth >= 1024) {
         setMobileMenuOpen(false);
         setSidebarOpen(false);
       }
     };
 
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    if (typeof window !== 'undefined') {
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   const handleNavigation = useCallback((href: string) => {
@@ -78,7 +79,13 @@ export default function MainNavigation() {
             {/* Mobile hamburger & Tablet sidebar toggle */}
             <div className="flex items-center lg:hidden">
               <button
-                onClick={window.innerWidth >= 768 ? toggleSidebar : toggleMobileMenu}
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    window.innerWidth >= 768 ? toggleSidebar() : toggleMobileMenu();
+                  } else {
+                    toggleMobileMenu();
+                  }
+                }}
                 className="inline-flex items-center justify-center p-2 rounded-lg text-gray-600 hover:text-blue-600 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                 aria-label="Toggle navigation menu"
               >

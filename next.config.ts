@@ -102,16 +102,11 @@ const nextConfig: NextConfig = {
     ];
   },
 
-  // Configure images for security
+  // Configure images for Vercel deployment
   images: {
-    dangerouslyAllowSVG: false,
-    contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
     remotePatterns: [],
     unoptimized: false,
   },
-  
-  // Skip static generation for problematic pages during build
-  output: 'standalone',
   
   // Additional security configurations
   async rewrites() {
