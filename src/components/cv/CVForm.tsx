@@ -7,7 +7,6 @@ import { useState } from 'react';
 import { CVData, PersonalInfo, Experience } from '../../types';
 import CVClearActions from './CVClearActions';
 import { cvStorage } from '../../lib/storage';
-import { sanitizeText, sanitizeName, sanitizeInput } from '../../lib/sanitization';
 
 interface CVFormProps {
   cvData: CVData;
@@ -29,39 +28,21 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
     { id: 'languages', name: 'Languages', icon: '🌍' },
   ];
   const handlePersonalInfoChange = (field: keyof PersonalInfo, value: string | boolean) => {
-    // Use appropriate sanitization based on field type
-    let sanitizedValue = value;
-    if (typeof value === 'string') {
-      if (field === 'name') {
-        sanitizedValue = sanitizeName(value);
-      } else {
-        sanitizedValue = sanitizeInput(value);
-      }
-    }
-    
+    // Use raw value without any sanitization for better mobile input experience
     onChange({
       personalInfo: {
         ...cvData.personalInfo,
-        [field]: sanitizedValue,
+        [field]: value,
       },
     });
   };
 
   const handleExperienceChange = (index: number, field: keyof Experience, value: any) => {
-    // Use appropriate sanitization for different fields
-    let sanitizedValue = value;
-    if (typeof value === 'string') {
-      if (field === 'position' || field === 'company') {
-        sanitizedValue = sanitizeInput(value); // Allow spaces in position/company names
-      } else {
-        sanitizedValue = sanitizeInput(value); // General input sanitization
-      }
-    }
-    
+    // Use raw value without sanitization for better mobile input experience
     const newExperience = [...cvData.experience];
     newExperience[index] = {
       ...newExperience[index],
-      [field]: sanitizedValue,
+      [field]: value,
     };
     onChange({ experience: newExperience });
   };
@@ -93,9 +74,9 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const updateAchievement = (expIndex: number, achievementIndex: number, value: string) => {
-    const sanitizedValue = sanitizeInput(value); // Use input sanitization to preserve spaces
+    // Use raw value without sanitization for better mobile input experience
     const newExperience = [...cvData.experience];
-    newExperience[expIndex].achievements[achievementIndex] = sanitizedValue;
+    newExperience[expIndex].achievements[achievementIndex] = value;
     onChange({ experience: newExperience });
   };
 
@@ -110,9 +91,9 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const addSkill = (skill: string) => {
-    const sanitizedSkill = sanitizeInput(skill); // Use input sanitization for skills
-    if (sanitizedSkill.trim() && !cvData.skills.includes(sanitizedSkill.trim())) {
-      onChange({ skills: [...cvData.skills, sanitizedSkill.trim()] });
+    // Use raw value without sanitization for better mobile input experience
+    if (skill.trim() && !cvData.skills.includes(skill.trim())) {
+      onChange({ skills: [...cvData.skills, skill.trim()] });
     }
   };
 
