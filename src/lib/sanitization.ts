@@ -27,6 +27,57 @@ export function sanitizeText(input: string): string {
 }
 
 /**
+ * Sanitize name input - preserves spaces while removing harmful content
+ */
+export function sanitizeName(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  
+  return input
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Remove script tags and their content
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove on* event attributes
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    // Remove javascript: urls
+    .replace(/javascript:/gi, '')
+    // Remove data: urls
+    .replace(/data:/gi, '')
+    // Allow all normal characters, spaces, apostrophes, hyphens for names
+    .replace(/[^a-zA-Z0-9\s'\-\u00C0-\u017F\u0100-\u024F]/g, '')
+    // Normalize multiple spaces to single space
+    .replace(/\s+/g, ' ')
+    // Only trim leading/trailing whitespace, preserve internal spaces
+    .trim()
+    // Limit length to prevent memory issues
+    .substring(0, 200); // Names shouldn't be super long
+}
+
+/**
+ * Sanitize general input that can have spaces (like achievements, descriptions)
+ */
+export function sanitizeInput(input: string): string {
+  if (!input || typeof input !== 'string') return '';
+  
+  return input
+    // Remove HTML tags
+    .replace(/<[^>]*>/g, '')
+    // Remove script tags and their content
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+    // Remove on* event attributes
+    .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+    // Remove javascript: urls
+    .replace(/javascript:/gi, '')
+    // Remove data: urls
+    .replace(/data:/gi, '')
+    // Only collapse excessive whitespace (3+ spaces to 2 spaces max)
+    .replace(/\s{3,}/g, '  ')
+    .trim()
+    // Limit length to prevent memory issues
+    .substring(0, 2000);
+}
+
+/**
  * Check if a string is likely a URL or email
  */
 export function isUrlOrEmail(text: string): boolean {

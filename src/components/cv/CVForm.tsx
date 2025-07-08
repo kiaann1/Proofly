@@ -7,7 +7,7 @@ import { useState } from 'react';
 import { CVData, PersonalInfo, Experience } from '../../types';
 import CVClearActions from './CVClearActions';
 import { cvStorage } from '../../lib/storage';
-import { sanitizeText } from '../../lib/sanitization';
+import { sanitizeText, sanitizeName, sanitizeInput } from '../../lib/sanitization';
 
 interface CVFormProps {
   cvData: CVData;
@@ -29,8 +29,15 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
     { id: 'languages', name: 'Languages', icon: '🌍' },
   ];
   const handlePersonalInfoChange = (field: keyof PersonalInfo, value: string | boolean) => {
-    // Sanitize string inputs but preserve boolean values
-    const sanitizedValue = typeof value === 'string' ? sanitizeText(value) : value;
+    // Use appropriate sanitization based on field type
+    let sanitizedValue = value;
+    if (typeof value === 'string') {
+      if (field === 'name') {
+        sanitizedValue = sanitizeName(value);
+      } else {
+        sanitizedValue = sanitizeInput(value);
+      }
+    }
     
     onChange({
       personalInfo: {
@@ -41,8 +48,15 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const handleExperienceChange = (index: number, field: keyof Experience, value: any) => {
-    // Sanitize string inputs
-    const sanitizedValue = typeof value === 'string' ? sanitizeText(value) : value;
+    // Use appropriate sanitization for different fields
+    let sanitizedValue = value;
+    if (typeof value === 'string') {
+      if (field === 'position' || field === 'company') {
+        sanitizedValue = sanitizeInput(value); // Allow spaces in position/company names
+      } else {
+        sanitizedValue = sanitizeInput(value); // General input sanitization
+      }
+    }
     
     const newExperience = [...cvData.experience];
     newExperience[index] = {
@@ -79,7 +93,7 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const updateAchievement = (expIndex: number, achievementIndex: number, value: string) => {
-    const sanitizedValue = sanitizeText(value);
+    const sanitizedValue = sanitizeInput(value); // Use input sanitization to preserve spaces
     const newExperience = [...cvData.experience];
     newExperience[expIndex].achievements[achievementIndex] = sanitizedValue;
     onChange({ experience: newExperience });
@@ -96,7 +110,7 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   };
 
   const addSkill = (skill: string) => {
-    const sanitizedSkill = sanitizeText(skill);
+    const sanitizedSkill = sanitizeInput(skill); // Use input sanitization for skills
     if (sanitizedSkill.trim() && !cvData.skills.includes(sanitizedSkill.trim())) {
       onChange({ skills: [...cvData.skills, sanitizedSkill.trim()] });
     }
@@ -203,6 +217,10 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
             onChange={(e) => handlePersonalInfoChange('name', e.target.value)}
             className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 placeholder-gray-500"
             placeholder="Enter your full name"
+            autoComplete="name"
+            spellCheck="false"
+            autoCorrect="off"
+            autoCapitalize="words"
           />
         </div>
 

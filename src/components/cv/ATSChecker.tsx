@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import { CVData, ATSAnalysis, ATSSuggestion } from '../../types';
 import { analyzeATS } from '../../lib/atsAnalyzer';
-import { extractTextFromFile, parseCV } from '../../lib/cvParser';
 import { cvStorage } from '../../lib/storage';
 import SuggestionTooltip from '../ui/SuggestionTooltip';
 
@@ -17,10 +16,8 @@ interface ATSCheckerProps {
 export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSCheckerProps) {
   const [jobDescription, setJobDescription] = useState('');
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
   const [analysis, setAnalysis] = useState<ATSAnalysis | null>(null);
-  const [activeTab, setActiveTab] = useState<'upload' | 'jobdesc' | 'analysis' | 'suggestions'>('upload');
-  const [showUploadSuccess, setShowUploadSuccess] = useState(false);
+  const [activeTab, setActiveTab] = useState<'jobdesc' | 'analysis' | 'suggestions'>('jobdesc');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set()); // Start empty to prevent hydration mismatch
   const [isClient, setIsClient] = useState(false);
 
@@ -82,53 +79,6 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       return () => clearTimeout(analysisTimer);
     }
   }, [jobDescription, cvData.personalInfo.name, cvData.experience.length, handleAnalyze]);
-  // Handle CV file upload and parsing
-  const handleCVUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    setIsUploading(true);
-    try {
-      // Extract text using improved parser
-      const text = await extractTextFromFile(file);
-      
-      // Parse CV data using enhanced parsing
-      const parsedData = parseCV(text, cvData);
-      
-      console.log('🔍 Upload debug - Parsed data:', parsedData);
-      console.log('🔍 Upload debug - Parsed experience:', parsedData.experience);
-      console.log('🔍 Upload debug - Current cvData experience:', cvData.experience);
-      
-      // Merge parsed data with existing CV data
-      const updatedCVData: Partial<CVData> = {
-        personalInfo: {
-          ...cvData.personalInfo,
-          ...parsedData.personalInfo,
-          // Preserve showSalaryInCV setting
-          showSalaryInCV: cvData.personalInfo.showSalaryInCV
-        },
-        skills: parsedData.skills.length > 0 ? parsedData.skills : cvData.skills,
-        experience: parsedData.experience.length > 0 ? parsedData.experience : cvData.experience
-      };
-      
-      console.log('🔍 Upload debug - Final merged data:', updatedCVData);
-      console.log('🔍 Upload debug - Final experience:', updatedCVData.experience);
-      
-      onChange(updatedCVData);
-      setShowUploadSuccess(true);
-      
-      // Show success message and suggest going to form editor
-      setTimeout(() => {
-        setShowUploadSuccess(false);
-      }, 5000);
-      
-      setActiveTab('jobdesc');
-    } catch (error) {
-      console.error('Error parsing CV:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to parse CV. Please ensure it\'s a valid PDF or text file.');
-    } finally {      setIsUploading(false);
-    }
-  };
 
   const getScoreColor = (score: number) => {
     if (score >= 80) return 'text-green-600 bg-green-100';
@@ -377,100 +327,6 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
       onSwitchToForm();
     }
   };
-
-  const renderUploadTab = () => (
-    <div className="space-y-6">
-      <div className="text-center sm:text-left">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">
-          Upload Your CV for ATS Analysis
-        </h2>
-        <p className="text-gray-600 mb-6 text-sm sm:text-base">
-          Upload your existing CV to automatically extract information and get ATS optimisation recommendations.
-        </p>
-      </div>
-
-      <div className="border-2 border-dashed border-gray-300 rounded-lg sm:rounded-xl p-6 sm:p-8 text-center hover:border-blue-400 transition-colors">
-        <div className="space-y-4">
-          <div className="flex justify-center">
-            <svg className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-            </svg>
-          </div>
-          <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
-              Upload Your CV
-            </h3>
-            <p className="text-gray-600 text-sm sm:text-base">
-              Supports PDF and Microsoft Word (DOCX) formats only
-            </p>
-          </div>
-          <div>
-            <input
-              type="file"
-              id="cv-upload"
-              accept=".pdf,.docx"
-              onChange={handleCVUpload}
-              className="hidden"
-              disabled={isUploading}
-            />
-            <label
-              htmlFor="cv-upload"
-              className={`inline-flex items-center px-4 sm:px-6 py-3 border border-transparent text-sm sm:text-base font-medium rounded-lg sm:rounded-xl text-white ${
-                isUploading 
-                  ? 'bg-gray-400 cursor-not-allowed' 
-                  : 'bg-blue-600 hover:bg-blue-700 cursor-pointer'
-              } transition-colors shadow-lg hover:shadow-xl`}
-            >
-              {isUploading ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Processing...
-                </>
-              ) : (
-                <>
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                  </svg>
-                  Choose File
-                </>
-              )}
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-4">
-        <div className="flex">
-          <div className="flex-shrink-0">
-            <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="ml-3">
-            <p className="text-sm text-blue-700">
-              <strong>Privacy Note:</strong> Your CV is processed locally in your browser. No data is sent to external servers.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Skip upload option */}
-      <div className="text-center pt-4 border-t border-gray-200">
-        <p className="text-gray-500 mb-4 text-sm sm:text-base">
-          Already have your information in the CV builder?
-        </p>
-        <button
-          onClick={() => setActiveTab('jobdesc')}
-          className="text-blue-600 hover:text-blue-700 font-medium text-sm sm:text-base transition-colors"
-        >
-          Skip and use existing data →
-        </button>
-      </div>
-    </div>
-  );
 
   const renderJobDescriptionTab = () => (
     <div className="space-y-6">
@@ -1060,53 +916,6 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     <div className="min-h-screen bg-gray-50">
       {/* Mobile-first responsive container */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
-        
-        {/* Upload Success Notification */}
-        {showUploadSuccess && (
-          <div className="mb-4 sm:mb-6 bg-green-50 border border-green-200 rounded-lg p-4">
-            <div className="flex items-start">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3 flex-1">
-                <h3 className="text-sm font-medium text-green-800">
-                  CV Uploaded Successfully!
-                </h3>
-                <div className="mt-2 text-sm text-green-700">
-                  <p>
-                    Your CV information has been extracted and populated. We recommend reviewing and editing 
-                    your details in the <strong>CV Builder</strong> before running the ATS analysis.
-                  </p>
-                </div>
-                <div className="mt-4">
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    {onSwitchToForm && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onSwitchToForm();
-                          setShowUploadSuccess(false);
-                        }}
-                        className="bg-green-100 px-3 py-2 rounded-md text-sm font-medium text-green-800 hover:bg-green-200 transition-colors"
-                      >
-                        Review & Edit Details
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => setShowUploadSuccess(false)}
-                      className="bg-white px-3 py-2 rounded-md text-sm font-medium text-green-800 border border-green-300 hover:bg-green-50 transition-colors"
-                    >
-                      Continue Here
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Main Content Card */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1116,14 +925,13 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             <div className="overflow-x-auto">
               <nav className="flex min-w-max sm:min-w-0 px-4 sm:px-6">
                 {[
-                  { id: 'upload', name: 'Upload CV', icon: '📤' },
                   { id: 'jobdesc', name: 'Job Description', icon: '📋' },
                   { id: 'analysis', name: 'ATS Analysis', icon: '📊' },
                   { id: 'suggestions', name: 'Suggestions', icon: '💡' },
                 ].map((tab) => (
                   <button
                     key={tab.id}
-                    onClick={() => setActiveTab(tab.id as 'upload' | 'jobdesc' | 'analysis' | 'suggestions')}
+                    onClick={() => setActiveTab(tab.id as 'jobdesc' | 'analysis' | 'suggestions')}
                     className={`flex-shrink-0 py-3 sm:py-4 px-3 sm:px-4 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${
                       activeTab === tab.id
                         ? 'border-blue-500 text-blue-600 bg-white'
@@ -1145,7 +953,6 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
 
           {/* Tab Content */}
           <div className="p-4 sm:p-6 lg:p-8">
-            {activeTab === 'upload' && renderUploadTab()}
             {activeTab === 'jobdesc' && renderJobDescriptionTab()}
             {activeTab === 'analysis' && renderAnalysisTab()}
             {activeTab === 'suggestions' && renderSuggestionsTab()}

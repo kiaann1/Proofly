@@ -4,7 +4,7 @@
 ##  Issues
 
 1. CV Builder > Full Name doesnt allow spaces so the user can't add their full name with a space in the middle
-   **FIXED ✅** - Updated sanitization logic in `src/lib/sanitization.ts` to allow spaces in the `sanitizeInput` function. Changed the regex to preserve spaces while still removing potentially harmful characters. Input now properly accepts full names with spaces.
+   **FIXED ✅** - Updated sanitization logic in `src/lib/sanitization.ts` to allow spaces in the `sanitizeInput` function. Changed the regex to preserve spaces while still removing potentially harmful characters. Enhanced `sanitizeName` function with proper character filtering for names including spaces, apostrophes, hyphens, and accented characters. Added mobile-specific input attributes (autoComplete, spellCheck, autoCorrect, autoCapitalize) to improve mobile keyboard behavior. Input now properly accepts full names with spaces on all devices including mobile.
 
 2. CV Builder > Email doesnt allow mobile shortcuts (i use @@ to autofill my email address)
    **FIXED ✅** - Changed input type from "email" to "text" in `src/components/cv/CVForm.tsx` for the email field. This allows mobile shortcuts like @@ to work while still maintaining validation through the sanitization function. Users can now use any mobile keyboard shortcuts for email input.
@@ -25,7 +25,7 @@
    **FIXED ✅** - Improved export button layout in `src/components/cv/CVPreview.tsx` by implementing a responsive flex layout. Added proper spacing, mobile-friendly button sizing, and ensured the buttons stack appropriately on smaller screens. Export buttons now have better visibility and usability on mobile devices.
 
 8. CV Builder > Export PDF > Preview Element Not Found
-   **FIXED ✅** - Enhanced PDF export logic in `src/lib/exportUtils.ts` with robust element detection and fallback mechanisms. Added multiple selectors to find the CV preview element and implemented error handling to prevent export failures. PDF export now works reliably across different states of the application.
+   **FIXED ✅** - Enhanced PDF export logic in `src/lib/exportUtils.ts` with robust element detection and fallback mechanisms. Added multiple selectors to find the CV preview element and implemented error handling to prevent export failures. **MAJOR UPDATE**: All PDF exports now use the enhanced `exportToPDFWithPageBreaks()` function which creates PDFs programmatically without requiring DOM elements, eliminating "preview element not found" errors completely. Updated all CV pages (`page.tsx`, `page_new.tsx`, `page_temp.tsx`) and CVPreview component to use the enhanced export function. PDF export now works reliably across different states of the application and on all devices.
 
 9. CV Builder > Templates > Export > doesnt show the styling or the template in docx export
    **FIXED ✅** - Completely overhauled DOCX export in `src/lib/exportUtils.ts` to properly reflect template styling and section headers. Added structured formatting with proper headings, bold text for section titles, and organized layout that matches the visual template. The DOCX export now maintains the professional appearance of the CV template.
@@ -41,6 +41,31 @@
 
 13. Cover letter generator > input fields should be white with black text
     **FIXED ✅** - Standardized all cover letter input fields in `src/app/cover-letter/page.tsx` to always use white background with black text. Removed all dark mode classes from input fields and textareas to ensure consistent visibility regardless of theme. All input fields now have consistent, readable styling. 
+
+14. Remove CV upload functionality and focus on CV building
+    **FIXED ✅** - Completely removed all CV upload functionality from the application while preserving ATS analysis features:
+    
+    **Removed Components:**
+    - Upload tab from ATS Checker component (`src/components/cv/ATSChecker.tsx`)
+    - File upload input and handling functions (`handleCVUpload`)
+    - Upload success notifications and related state variables
+    - CV parsing imports and dependencies
+    
+    **Updated ATS Checker:**
+    - Removed upload tab from navigation, now starts with "Job Description" tab
+    - Removed upload-related state variables (`isUploading`, `showUploadSuccess`)
+    - Simplified tab navigation to focus on: Job Description → ATS Analysis → Suggestions
+    - Preserved all ATS analysis functionality and scoring algorithms
+    - Maintained enhanced ATS compatibility checking based on ResumeHelp recommendations
+    
+    **Benefits:**
+    - Streamlined user experience focused on manual CV building
+    - Eliminated parsing errors and extraction issues
+    - Reduced complexity and potential points of failure
+    - Maintained all ATS analysis and optimization features
+    - Improved performance by removing file processing overhead
+    
+    The application now focuses entirely on guided CV building with comprehensive ATS analysis, providing a more reliable and user-friendly experience. 
 
 ### Future Improvements
 1. Ensure the ATS checker conducts Resume parsing to ensure that the cv is as good as it can be 

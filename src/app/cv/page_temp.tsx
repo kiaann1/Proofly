@@ -10,7 +10,7 @@ import CVForm from '../../components/cv/CVForm';
 import CVPreview from '../../components/cv/CVPreview';
 import ATSChecker from '../../components/cv/ATSChecker';
 import { cvStorage } from '../../lib/storage';
-import { exportToPDF, exportToDOCX } from '../../lib/exportUtils';
+import { exportToPDFWithPageBreaks, exportToDOCX } from '../../lib/exportUtils';
 
 const defaultPersonalInfo: PersonalInfo = {
   name: '',
@@ -103,15 +103,7 @@ export default function CVBuilderPage() {
 
   const handleExportPDF = async () => {
     try {
-      if (activeTab !== 'preview') {
-        setActiveTab('preview');
-        // Wait for the tab to switch and render
-        setTimeout(async () => {
-          await exportToPDF(cvData, 'cv-preview');
-        }, 100);
-      } else {
-        await exportToPDF(cvData, 'cv-preview');
-      }
+      await exportToPDFWithPageBreaks(cvData);
     } catch (error) {
       console.error('Error exporting PDF:', error);
       alert('Failed to export PDF. Please try again.');
