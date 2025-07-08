@@ -840,15 +840,16 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
 
     if (!analysis || analysis.suggestions.length === 0) {
       return (
-        <div className="text-center py-12">
-          <svg className="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="text-center py-8 sm:py-12">
+          <svg className="w-12 h-12 sm:w-16 sm:h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
           <p className="text-lg text-gray-600 mb-2">No Suggestions Available</p>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 px-4">
             Run an analysis first to get personalised recommendations
           </p>
-        </div>      );
+        </div>
+      );
     }
 
     const toggleSection = (priority: string) => {
@@ -870,12 +871,12 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     }, {} as Record<string, ATSSuggestion[]>);
 
     return (
-      <div className="space-y-6 p-5">
-        <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+      <div className="space-y-4 sm:space-y-6">
+        <div className="text-center sm:text-left">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2">
             Optimisation Suggestions
           </h2>
-          <p className="text-gray-600">
+          <p className="text-sm sm:text-base text-gray-600 px-2 sm:px-0">
             Actionable recommendations to improve your ATS compatibility score
           </p>
         </div>
@@ -904,46 +905,49 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               badgeColor: 'bg-yellow-100 text-yellow-800'
             },
             low: { 
-              color: 'blue', 
+              color: 'green', 
               label: 'Low Priority', 
               icon: '💡',
-              bgColor: 'bg-blue-50',
-              borderColor: 'border-blue-200',
-              textColor: 'text-blue-700',
-              badgeColor: 'bg-blue-100 text-blue-800'
-            },
+              bgColor: 'bg-green-50',
+              borderColor: 'border-green-200',
+              textColor: 'text-green-700',
+              badgeColor: 'bg-green-100 text-green-800'
+            }
           };
 
           const config = priorityConfig[priority];
-          // Prevent hydration mismatch by defaulting to collapsed until client loads
-          const isExpanded = isClient && expandedSections.has(priority);
+          const isExpanded = expandedSections.has(priority);
 
           return (
-            <div key={priority} className={`rounded-xl border ${config.borderColor} ${config.bgColor} overflow-hidden transition-all duration-200`}>
+            <div
+              key={priority}
+              className={`rounded-lg sm:rounded-xl border-2 ${config.borderColor} ${config.bgColor} overflow-hidden`}
+            >
               <button
                 onClick={() => toggleSection(priority)}
-                className="w-full px-6 py-4 flex items-center justify-between hover:bg-white/50 transition-colors"
+                className={`w-full px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between hover:bg-opacity-80 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500`}
               >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">{config.icon}</span>
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <span className="text-lg sm:text-xl">{config.icon}</span>
                   <div className="text-left">
-                    <h3 className={`text-lg font-semibold ${config.textColor}`}>
+                    <h3 className="font-semibold text-sm sm:text-base text-gray-900">
                       {config.label}
                     </h3>
-                    <p className="text-sm text-gray-500">
-                      {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''} to review
+                    <p className="text-xs sm:text-sm text-gray-600">
+                      {suggestions.length} suggestion{suggestions.length !== 1 ? 's' : ''}
                     </p>
                   </div>
-                </div>
-                
-                <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${config.badgeColor}`}>
+                  <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${config.badgeColor}`}>
                     {suggestions.length}
                   </span>
-                  <svg 
-                    className={`w-5 h-5 ${config.textColor} transform transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    stroke="currentColor" 
+                </div>
+                <div className="flex items-center">
+                  <svg
+                    className={`w-5 h-5 sm:w-6 sm:h-6 text-gray-500 transition-transform duration-200 ${
+                      isExpanded ? 'rotate-180' : ''
+                    }`}
+                    fill="none"
+                    stroke="currentColor"
                     viewBox="0 0 24 24"
                   >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
@@ -952,63 +956,67 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
               </button>
 
               {isExpanded && (
-                <div className="px-6 pb-6 space-y-4 bg-white/30">
-                  {suggestions.map((suggestion) => (
+                <div className="px-3 sm:px-6 pb-4 sm:pb-6 space-y-3 sm:space-y-4 bg-white/30">
+                  {suggestions.map((suggestion, index) => (
                     <div
                       key={suggestion.id}
-                      className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
+                      className="bg-white border border-gray-200 rounded-lg p-3 sm:p-4 shadow-sm hover:shadow-md transition-shadow duration-200"
                     >
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2 mb-2">
-                            <h4 className="font-medium text-gray-900">
-                              {suggestion.title}
-                            </h4>
-                            {(suggestion.whyImportant || suggestion.howToImplement) && (
-                              <SuggestionTooltip 
-                                whyImportant={suggestion.whyImportant}
-                                howToImplement={suggestion.howToImplement}
-                                id={`suggestion-${priority}-${suggestions.indexOf(suggestion)}`}
-                              >
-                                <button className="cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center">
-                                  <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
-                                  </svg>
-                                </button>
-                              </SuggestionTooltip>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-600 mb-3 leading-relaxed">
-                            {suggestion.description}
-                          </p>
-                          <div className="flex items-center gap-2">
-                            <span className={`px-2 py-1 rounded-md text-xs font-medium ${
-                              suggestion.type === 'keyword' ? 'bg-blue-100 text-blue-800' :
-                              suggestion.type === 'format' ? 'bg-green-100 text-green-800' :
-                              suggestion.type === 'content' ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {suggestion.type}
-                            </span>
-                            {suggestion.actionable && (
-                              <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md text-xs font-medium">
-                                Actionable
+                      <div className="space-y-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start gap-2 mb-2">
+                              <h4 className="font-medium text-sm sm:text-base text-gray-900 leading-tight">
+                                {suggestion.title}
+                              </h4>
+                              {(suggestion.whyImportant || suggestion.howToImplement) && (
+                                <SuggestionTooltip 
+                                  whyImportant={suggestion.whyImportant}
+                                  howToImplement={suggestion.howToImplement}
+                                  id={`suggestion-${priority}-${index}`}
+                                >
+                                  <button className="cursor-pointer p-1 rounded-full hover:bg-gray-100 transition-colors flex items-center justify-center flex-shrink-0">
+                                    <svg className="w-4 h-4 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                </SuggestionTooltip>
+                              )}
+                            </div>
+                            <p className="text-xs sm:text-sm text-gray-600 mb-3 leading-relaxed">
+                              {suggestion.description}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                              <span className={`px-2 py-1 rounded-md text-xs font-medium ${
+                                suggestion.type === 'keyword' ? 'bg-blue-100 text-blue-800' :
+                                suggestion.type === 'format' ? 'bg-green-100 text-green-800' :
+                                suggestion.type === 'content' ? 'bg-purple-100 text-purple-800' :
+                                'bg-gray-100 text-gray-800'
+                              }`}>
+                                {suggestion.type}
                               </span>
-                            )}
+                              {suggestion.actionable && (
+                                <span className="px-2 py-1 bg-emerald-100 text-emerald-800 rounded-md text-xs font-medium">
+                                  Actionable
+                                </span>
+                              )}
+                            </div>
                           </div>
+                          
+                          {suggestion.autoFixAvailable && (
+                            <div className="flex-shrink-0 w-full sm:w-auto">
+                              <button
+                                onClick={() => applySuggestion(suggestion)}
+                                className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
+                              >
+                                <svg className="w-3 h-3 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                Apply Fix
+                              </button>
+                            </div>
+                          )}
                         </div>
-                        
-                        {suggestion.autoFixAvailable && (
-                          <button
-                            onClick={() => applySuggestion(suggestion)}
-                            className="ml-4 flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors shadow-sm hover:shadow-md"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                            </svg>
-                            Apply Fix
-                          </button>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -1019,26 +1027,26 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         })}
         
         {/* Summary Actions */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-6 mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <div className="bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-lg sm:rounded-xl p-4 sm:p-6 mt-6 sm:mt-8">
+          <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 text-center sm:text-left">
             Quick Actions
           </h3>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 sm:gap-3">
             <button
               onClick={() => setExpandedSections(new Set(['high', 'medium', 'low']))}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+              className="px-3 sm:px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
             >
               Expand All
             </button>
             <button
               onClick={() => setExpandedSections(new Set())}
-              className="px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
+              className="px-3 sm:px-4 py-2 bg-gray-600 text-white rounded-lg text-sm font-medium hover:bg-gray-700 transition-colors"
             >
               Collapse All
             </button>
             <button
               onClick={() => setExpandedSections(new Set(['high']))}
-              className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+              className="px-3 sm:px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
             >
               High Priority Only
             </button>

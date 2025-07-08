@@ -211,7 +211,7 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
             Email Address *
           </label>
           <input
-            type="email"
+            type="text"
             value={cvData.personalInfo.email}
             onChange={(e) => handlePersonalInfoChange('email', e.target.value)}
             className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 placeholder-gray-500"
@@ -223,13 +223,47 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
           <label className="block text-sm font-medium text-gray-700  mb-2">
             Phone Number
           </label>
-          <input
-            type="tel"
-            value={cvData.personalInfo.phone}
-            onChange={(e) => handlePersonalInfoChange('phone', e.target.value)}
-            className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900  bg-white   placeholder-gray-500 "
-            placeholder="e.g., +44 7700 900123"
-          />
+          <div className="flex gap-2">
+            <select
+              value={cvData.personalInfo.phone.split(' ')[0] || '+44'}
+              onChange={(e) => {
+                const currentNumber = cvData.personalInfo.phone.replace(/^\+\d+\s*/, '');
+                handlePersonalInfoChange('phone', `${e.target.value} ${currentNumber}`);
+              }}
+              className="w-24 px-2 py-2 lg:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white"
+            >
+              <option value="+44">🇬🇧 +44</option>
+              <option value="+1">🇺🇸 +1</option>
+              <option value="+33">🇫🇷 +33</option>
+              <option value="+49">🇩🇪 +49</option>
+              <option value="+34">🇪🇸 +34</option>
+              <option value="+39">🇮🇹 +39</option>
+              <option value="+31">🇳🇱 +31</option>
+              <option value="+32">🇧🇪 +32</option>
+              <option value="+41">🇨🇭 +41</option>
+              <option value="+43">🇦🇹 +43</option>
+              <option value="+46">🇸🇪 +46</option>
+              <option value="+47">🇳🇴 +47</option>
+              <option value="+45">🇩🇰 +45</option>
+              <option value="+358">🇫🇮 +358</option>
+              <option value="+91">🇮🇳 +91</option>
+              <option value="+86">🇨🇳 +86</option>
+              <option value="+81">🇯🇵 +81</option>
+              <option value="+82">🇰🇷 +82</option>
+              <option value="+61">🇦🇺 +61</option>
+              <option value="+64">🇳🇿 +64</option>
+            </select>
+            <input
+              type="tel"
+              value={cvData.personalInfo.phone.replace(/^\+\d+\s*/, '')}
+              onChange={(e) => {
+                const countryCode = cvData.personalInfo.phone.split(' ')[0] || '+44';
+                handlePersonalInfoChange('phone', `${countryCode} ${e.target.value}`);
+              }}
+              className="flex-1 px-3 lg:px-4 py-2 lg:py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-gray-900 bg-white placeholder-gray-500"
+              placeholder="7700 900123"
+            />
+          </div>
         </div>
 
         <div>
@@ -665,13 +699,13 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700   mb-2">GPA (Optional)</label>
+                  <label className="block text-sm font-medium text-gray-700   mb-2">Grade (Optional)</label>
                   <input
                     type="text"
                     value={edu.gpa}
                     onChange={(e) => handleEducationChange(index, 'gpa', e.target.value)}
                     className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300  rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900  bg-white   placeholder-gray-500 "
-                    placeholder="e.g., 3.8/4.0"
+                    placeholder="e.g., 2.1"
                   />
                 </div>
 

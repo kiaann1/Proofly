@@ -226,44 +226,110 @@ async function generatePDFFromElement(element: HTMLElement, cvData: CVData, isTe
 export async function exportToDOCX(cvData: CVData): Promise<void> {
   try {
     const children: any[] = [];
+    const template = cvData.template || { id: 'modern', name: 'Modern', description: 'Modern style', category: 'modern' };
+
+    // Get template-based styling preferences
+    const getTemplateStyles = (templateId: string) => {
+      switch (templateId) {
+        case 'minimal':
+          return {
+            nameSize: 28,
+            sectionSize: 16,
+            nameAlignment: 'left',
+            useColors: false,
+          };
+        case 'classic':
+          return {
+            nameSize: 32,
+            sectionSize: 18,
+            nameAlignment: 'center',
+            useColors: false,
+          };
+        case 'modern':
+        case 'two-column':
+          return {
+            nameSize: 30,
+            sectionSize: 16,
+            nameAlignment: 'left',
+            useColors: true,
+          };
+        case 'creative':
+          return {
+            nameSize: 32,
+            sectionSize: 18,
+            nameAlignment: 'left',
+            useColors: true,
+          };
+        default:
+          return {
+            nameSize: 28,
+            sectionSize: 16,
+            nameAlignment: 'left',
+            useColors: false,
+          };
+      }
+    };
+
+    const styles = getTemplateStyles(template.id);
 
     // Personal Information
     if (cvData.personalInfo.name) {
       children.push(
         new Paragraph({
-          text: cvData.personalInfo.name,
-          heading: HeadingLevel.TITLE,
-          alignment: 'center',
+          children: [
+            new TextRun({
+              text: cvData.personalInfo.name,
+              bold: true,
+              size: styles.nameSize * 2, // Size is in half-points
+              color: styles.useColors ? '2563EB' : '000000', // Blue for modern templates
+            })
+          ],
+          alignment: styles.nameAlignment as any,
+          spacing: { after: 200 },
         })
       );
     }
 
     // Contact information
     const contactInfo: string[] = [];
-    if (cvData.personalInfo.email) contactInfo.push(cvData.personalInfo.email);
-    if (cvData.personalInfo.phone) contactInfo.push(cvData.personalInfo.phone);
-    if (cvData.personalInfo.location) contactInfo.push(cvData.personalInfo.location);
+    if (cvData.personalInfo.email) contactInfo.push(`📧 ${cvData.personalInfo.email}`);
+    if (cvData.personalInfo.phone) contactInfo.push(`📞 ${cvData.personalInfo.phone}`);
+    if (cvData.personalInfo.location) contactInfo.push(`📍 ${cvData.personalInfo.location}`);
 
     if (contactInfo.length > 0) {
       children.push(
         new Paragraph({
-          text: contactInfo.join(' | '),
-          alignment: 'center',
+          children: [
+            new TextRun({
+              text: contactInfo.join(' | '),
+              size: 20,
+            })
+          ],
+          alignment: styles.nameAlignment as any,
+          spacing: { after: 150 },
         })
       );
     }
 
-    // Links
+    // Links with icons
     const links: string[] = [];
-    if (cvData.personalInfo.linkedin) links.push(`LinkedIn: ${cvData.personalInfo.linkedin}`);
-    if (cvData.personalInfo.github) links.push(`GitHub: ${cvData.personalInfo.github}`);
-    if (cvData.personalInfo.website) links.push(`Website: ${cvData.personalInfo.website}`);
+    if (cvData.personalInfo.linkedin) links.push(`💼 LinkedIn: ${cvData.personalInfo.linkedin}`);
+    if (cvData.personalInfo.github) links.push(`🐙 GitHub: ${cvData.personalInfo.github}`);
+    if (cvData.personalInfo.website) links.push(`🌐 Website: ${cvData.personalInfo.website}`);
+    if (cvData.personalInfo.portfolio) links.push(`🎨 Portfolio: ${cvData.personalInfo.portfolio}`);
 
     if (links.length > 0) {
       children.push(
         new Paragraph({
-          text: links.join(' | '),
-          alignment: 'center',
+          children: [
+            new TextRun({
+              text: links.join(' | '),
+              size: 18,
+              color: styles.useColors ? '2563EB' : '666666',
+            })
+          ],
+          alignment: styles.nameAlignment as any,
+          spacing: { after: 300 },
         })
       );
     }
@@ -271,13 +337,25 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
     // Professional Summary
     if (cvData.personalInfo.summary) {
       children.push(
-        new Paragraph({ text: '' }), // Spacing
         new Paragraph({
-          text: 'Professional Summary',
-          heading: HeadingLevel.HEADING_1,
+          children: [
+            new TextRun({
+              text: 'PROFESSIONAL SUMMARY',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 200, after: 150 },
         }),
         new Paragraph({
-          text: cvData.personalInfo.summary,
+          children: [
+            new TextRun({
+              text: cvData.personalInfo.summary,
+              size: 22,
+            })
+          ],
+          spacing: { after: 250 },
         })
       );
     }
@@ -285,67 +363,87 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
     // Work Experience
     if (cvData.experience.length > 0) {
       children.push(
-        new Paragraph({ text: '' }), // Spacing
         new Paragraph({
-          text: 'Work Experience',
-          heading: HeadingLevel.HEADING_1,
+          children: [
+            new TextRun({
+              text: 'WORK EXPERIENCE',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 200, after: 150 },
         })
       );
 
-      cvData.experience.forEach((exp) => {
+      cvData.experience.forEach((exp, index) => {
         children.push(
           new Paragraph({
             children: [
               new TextRun({
                 text: exp.position,
                 bold: true,
+                size: 24,
               }),
               new TextRun({
-                text: ` at ${exp.company}`,
+                text: ` | ${exp.company}`,
+                size: 24,
+                color: styles.useColors ? '2563EB' : '333333',
               }),
             ],
+            spacing: { before: index > 0 ? 200 : 0 },
           }),
           new Paragraph({
             children: [
               new TextRun({
                 text: `${exp.startDate} - ${exp.current ? 'Present' : exp.endDate}`,
                 italics: true,
-              })
-            ]
+                size: 20,
+                color: '666666',
+              }),
+              ...(exp.location ? [new TextRun({
+                text: ` | ${exp.location}`,
+                italics: true,
+                size: 20,
+                color: '666666',
+              })] : [])
+            ],
+            spacing: { after: 100 },
           })
         );
-
-        if (exp.location) {
-          children.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: exp.location,
-                  italics: true,
-                })
-              ]
-            })
-          );
-        }
 
         if (exp.description) {
           children.push(
             new Paragraph({
-              text: exp.description,
+              children: [
+                new TextRun({
+                  text: exp.description,
+                  size: 22,
+                })
+              ],
+              spacing: { after: 100 },
             })
           );
         }
 
-        // Achievements
+        // Achievements with bullet points
         exp.achievements.forEach((achievement) => {
           children.push(
             new Paragraph({
-              text: `• ${achievement}`,
+              children: [
+                new TextRun({
+                  text: `• ${achievement}`,
+                  size: 22,
+                })
+              ],
+              indent: { left: 720 }, // Left indent for bullet points
             })
           );
         });
 
-        children.push(new Paragraph({ text: '' })); // Spacing
+        if (index < cvData.experience.length - 1) {
+          children.push(new Paragraph({ text: '', spacing: { after: 150 } }));
+        }
       });
     }
 
@@ -353,31 +451,55 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
     if (cvData.education.length > 0) {
       children.push(
         new Paragraph({
-          text: 'Education',
-          heading: HeadingLevel.HEADING_1,
+          children: [
+            new TextRun({
+              text: 'EDUCATION',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 300, after: 150 },
         })
       );
 
-      cvData.education.forEach((edu) => {
+      cvData.education.forEach((edu, index) => {
         children.push(
           new Paragraph({
             children: [
               new TextRun({
                 text: edu.degree,
                 bold: true,
+                size: 24,
               }),
             ],
+            spacing: { before: index > 0 ? 200 : 0 },
           }),
           new Paragraph({
-            text: edu.institution,
+            children: [
+              new TextRun({
+                text: edu.institution,
+                size: 22,
+                color: styles.useColors ? '2563EB' : '333333',
+              }),
+            ],
           }),
           new Paragraph({
             children: [
               new TextRun({
                 text: `${edu.startDate} - ${edu.current ? 'Present' : edu.endDate}`,
                 italics: true,
-              })
-            ]
+                size: 20,
+                color: '666666',
+              }),
+              ...(edu.location ? [new TextRun({
+                text: ` | ${edu.location}`,
+                italics: true,
+                size: 20,
+                color: '666666',
+              })] : [])
+            ],
+            spacing: { after: 100 },
           })
         );
 
@@ -386,10 +508,13 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
             new Paragraph({
               children: [
                 new TextRun({
-                  text: `GPA: ${edu.gpa}`,
+                  text: `Grade: ${edu.gpa}`,
                   italics: true,
+                  size: 20,
+                  color: '666666',
                 })
-              ]
+              ],
+              spacing: { after: 100 },
             })
           );
         }
@@ -397,12 +522,16 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
         if (edu.description) {
           children.push(
             new Paragraph({
-              text: edu.description,
+              children: [
+                new TextRun({
+                  text: edu.description,
+                  size: 22,
+                })
+              ],
+              spacing: { after: 100 },
             })
           );
         }
-
-        children.push(new Paragraph({ text: '' })); // Spacing
       });
     }
 
@@ -410,11 +539,24 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
     if (cvData.skills.length > 0) {
       children.push(
         new Paragraph({
-          text: 'Skills',
-          heading: HeadingLevel.HEADING_1,
+          children: [
+            new TextRun({
+              text: 'SKILLS',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 300, after: 150 },
         }),
         new Paragraph({
-          text: cvData.skills.join(', '),
+          children: [
+            new TextRun({
+              text: cvData.skills.join(' • '),
+              size: 22,
+            })
+          ],
+          spacing: { after: 200 },
         })
       );
     }
@@ -422,50 +564,54 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
     // Certifications
     if (cvData.certifications.length > 0) {
       children.push(
-        new Paragraph({ text: '' }), // Spacing
         new Paragraph({
-          text: 'Certifications',
-          heading: HeadingLevel.HEADING_1,
+          children: [
+            new TextRun({
+              text: 'CERTIFICATIONS',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 300, after: 150 },
         })
       );
 
-      cvData.certifications.forEach((cert) => {
+      cvData.certifications.forEach((cert, index) => {
         children.push(
           new Paragraph({
             children: [
               new TextRun({
                 text: cert.name,
                 bold: true,
+                size: 24,
               }),
               new TextRun({
-                text: ` - ${cert.issuer}`,
+                text: ` | ${cert.issuer}`,
+                size: 22,
+                color: styles.useColors ? '2563EB' : '333333',
               }),
             ],
+            spacing: { before: index > 0 ? 150 : 0 },
           }),
           new Paragraph({
             children: [
               new TextRun({
                 text: cert.date,
                 italics: true,
-              })
-            ]
+                size: 20,
+                color: '666666',
+              }),
+              ...(cert.expiryDate ? [new TextRun({
+                text: ` | Expires: ${cert.expiryDate}`,
+                italics: true,
+                size: 20,
+                color: '666666',
+              })] : [])
+            ],
+            spacing: { after: 100 },
           })
         );
-
-        if (cert.expiryDate) {
-          children.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: `Expires: ${cert.expiryDate}`,
-                  italics: true,
-                })
-              ]
-            })
-          );
-        }
-
-        children.push(new Paragraph({ text: '' })); // Spacing
       });
     }
 
@@ -473,18 +619,63 @@ export async function exportToDOCX(cvData: CVData): Promise<void> {
     if (cvData.languages.length > 0) {
       children.push(
         new Paragraph({
-          text: 'Languages',
-          heading: HeadingLevel.HEADING_1,
+          children: [
+            new TextRun({
+              text: 'LANGUAGES',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 300, after: 150 },
         })
       );
 
-      cvData.languages.forEach((lang) => {
+      cvData.languages.forEach((lang, index) => {
         children.push(
           new Paragraph({
-            text: `${lang.name}: ${lang.proficiency}`,
+            children: [
+              new TextRun({
+                text: `${lang.name}: `,
+                bold: true,
+                size: 22,
+              }),
+              new TextRun({
+                text: lang.proficiency,
+                size: 22,
+                color: styles.useColors ? '2563EB' : '333333',
+              })
+            ],
+            spacing: { before: index > 0 ? 100 : 0 },
           })
         );
       });
+    }
+
+    // Salary Expectation (if enabled)
+    if (cvData.personalInfo.showSalaryInCV && cvData.personalInfo.salaryExpectation) {
+      children.push(
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: 'SALARY EXPECTATION',
+              bold: true,
+              size: styles.sectionSize * 2,
+              color: styles.useColors ? '2563EB' : '000000',
+            })
+          ],
+          spacing: { before: 300, after: 150 },
+        }),
+        new Paragraph({
+          children: [
+            new TextRun({
+              text: cvData.personalInfo.salaryExpectation,
+              size: 22,
+            })
+          ],
+          spacing: { after: 200 },
+        })
+      );
     }
 
     // Create document
@@ -632,7 +823,7 @@ export function exportToMarkdown(cvData: CVData): void {
 }
 
 /**
- * Export cover letter as PDF using the preview element
+ * Export cover letter as PDF with proper page breaks and formatting
  */
 export async function exportCoverLetterToPDF(letterContent: string, fileName: string = 'cover_letter.pdf'): Promise<void> {
   try {
@@ -641,122 +832,9 @@ export async function exportCoverLetterToPDF(letterContent: string, fileName: st
       throw new Error('PDF export is only available in browser environment');
     }
 
-    const element = document.getElementById('cover-letter-preview');
-    if (!element) {
-      throw new Error('Cover letter preview element not found');
-    }
+    console.log('Starting cover letter PDF export...');
 
-    console.log('Starting cover letter PDF export...', element);
-
-    // Wait a bit for any pending renders
-    await new Promise(resolve => setTimeout(resolve, 200));
-
-    let canvas;
-    try {
-      // Try the advanced HTML-to-canvas approach first
-      canvas = await html2canvas(element, {
-        scale: 2.5, // Higher resolution for better quality
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: '#ffffff',
-        height: element.scrollHeight,
-        width: element.scrollWidth,
-        logging: false, // Disable console logs
-        removeContainer: true,
-        foreignObjectRendering: false,
-        ignoreElements: (element) => {
-          // Skip elements that might cause issues
-          if (element.tagName === 'SCRIPT' || element.tagName === 'STYLE' || element.tagName === 'NOSCRIPT') {
-            return true;
-          }
-          // Skip hidden elements
-          if (typeof window !== 'undefined') {
-            const styles = window.getComputedStyle(element);
-            if (styles.display === 'none' || styles.visibility === 'hidden' || styles.opacity === '0') {
-              return true;
-            }
-          }
-          return false;
-        },
-        onclone: (clonedDoc) => {
-          // Remove any problematic elements in cloned document
-          const clonedElement = clonedDoc.getElementById('cover-letter-preview');
-          if (clonedElement && typeof window !== 'undefined') {
-            // Remove any elements that might cause issues
-            const problematicElements = clonedElement.querySelectorAll('iframe, embed, object, video, script, noscript');
-            problematicElements.forEach(el => el.remove());
-
-            // Force all colors to be RGB and handle CSS variables
-            const allElements = clonedElement.querySelectorAll('*');
-            allElements.forEach(el => {
-              try {
-                const styles = window.getComputedStyle(el);
-                const htmlEl = el as HTMLElement;
-                
-                // Helper function to convert any color to a safe RGB value
-                const getSafeColor = (colorValue: string, defaultColor: string): string => {
-                  if (!colorValue || colorValue === 'transparent' || colorValue === 'inherit' || colorValue === 'initial') {
-                    return defaultColor;
-                  }
-                  
-                  // Convert CSS variables, oklch, lab, lch, and other modern color formats to RGB
-                  if (colorValue.includes('var(') || colorValue.includes('oklch') || 
-                      colorValue.includes('lab(') || colorValue.includes('lch(') ||
-                      colorValue.includes('color-mix(') || colorValue.includes('light-dark(')) {
-                    return defaultColor;
-                  }
-                  
-                  // If it's already RGB/RGBA or hex, keep it
-                  if (colorValue.match(/^(rgb|rgba|#)/)) {
-                    return colorValue;
-                  }
-                  
-                  // For named colors and other formats, use default
-                  return defaultColor;
-                };
-
-                // Apply safe colors and fonts
-                htmlEl.style.color = getSafeColor(styles.color, '#374151');
-                htmlEl.style.backgroundColor = getSafeColor(styles.backgroundColor, 'transparent');
-                htmlEl.style.borderColor = getSafeColor(styles.borderColor, '#d1d5db');
-                htmlEl.style.fontFamily = 'Georgia, serif';
-                
-                // Ensure specific styles for better PDF rendering
-                if (htmlEl.tagName === 'PRE') {
-                  htmlEl.style.whiteSpace = 'pre-wrap';
-                  htmlEl.style.wordBreak = 'break-word';
-                  htmlEl.style.fontFamily = 'Georgia, serif';
-                  htmlEl.style.fontSize = styles.fontSize || '14px';
-                  htmlEl.style.lineHeight = styles.lineHeight || '1.6';
-                  htmlEl.style.margin = '0';
-                  htmlEl.style.padding = '0';
-                }
-              } catch (error) {
-                // Ignore errors for individual elements
-                console.warn('Error processing element for PDF:', error);
-              }
-            });
-
-            // Ensure the root element has proper styling
-            clonedElement.style.backgroundColor = '#ffffff';
-            clonedElement.style.color = '#374151';
-            clonedElement.style.fontFamily = 'Georgia, serif';
-            clonedElement.style.lineHeight = '1.6';
-            clonedElement.style.overflow = 'visible';
-            clonedElement.style.position = 'relative';
-          }
-        }
-      });
-    } catch (canvasError) {
-      console.warn('HTML-to-canvas failed, falling back to text-based PDF:', canvasError);
-      // Fallback to text-based PDF generation
-      return generateTextBasedPDF(letterContent, fileName);
-    }
-
-    console.log('Canvas created successfully', canvas.width, canvas.height);
-
-    // Create PDF with proper margins
-    const imgData = canvas.toDataURL('image/png');
+    // Create PDF with proper formatting and page breaks
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -765,38 +843,103 @@ export async function exportCoverLetterToPDF(letterContent: string, fileName: st
 
     const pageWidth = 210; // A4 width in mm
     const pageHeight = 297; // A4 height in mm
-    const margin = 20; // 20mm margins
-    const imgWidth = pageWidth - (margin * 2); // Available width with margins
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-    let heightLeft = imgHeight;
-
-    let position = margin; // Start position with top margin
-
-    // Add first page
-    pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-    heightLeft -= (pageHeight - (margin * 2));
-
-    // Add additional pages if needed
-    while (heightLeft >= 0) {
-      position = heightLeft - imgHeight + margin;
-      pdf.addPage();
-      pdf.addImage(imgData, 'PNG', margin, position, imgWidth, imgHeight);
-      heightLeft -= (pageHeight - (margin * 2));
+    const margin = 25; // 25mm margins for formal letter
+    const maxWidth = pageWidth - (margin * 2);
+    const maxHeight = pageHeight - (margin * 2);
+    
+    // Set up fonts and styling
+    pdf.setFont('times', 'normal');
+    pdf.setFontSize(11);
+    
+    let currentY = margin;
+    const lineHeight = 6; // Spacing between lines
+    const paragraphSpacing = 8; // Extra spacing between paragraphs
+    
+    // Split content into paragraphs
+    const paragraphs = letterContent.split('\n\n').filter(p => p.trim());
+    
+    for (let i = 0; i < paragraphs.length; i++) {
+      const paragraph = paragraphs[i].trim();
+      
+      // Handle different types of content
+      if (paragraph.includes('@') && paragraph.includes('.')) {
+        // Email address - smaller font
+        pdf.setFontSize(10);
+        const emailLines = pdf.splitTextToSize(paragraph, maxWidth);
+        
+        for (const line of emailLines) {
+          if (currentY + lineHeight > pageHeight - margin) {
+            pdf.addPage();
+            currentY = margin;
+          }
+          pdf.text(line, margin, currentY);
+          currentY += lineHeight;
+        }
+        currentY += paragraphSpacing;
+        pdf.setFontSize(11); // Reset font size
+        
+      } else if (paragraph.toLowerCase().includes('dear ') || paragraph.toLowerCase().includes('sincerely') || paragraph.toLowerCase().includes('best regards') || paragraph.toLowerCase().includes('yours faithfully')) {
+        // Salutation or closing - normal formatting
+        const lines = pdf.splitTextToSize(paragraph, maxWidth);
+        
+        for (const line of lines) {
+          if (currentY + lineHeight > pageHeight - margin) {
+            pdf.addPage();
+            currentY = margin;
+          }
+          pdf.text(line, margin, currentY);
+          currentY += lineHeight;
+        }
+        currentY += paragraphSpacing;
+        
+      } else if (paragraph.startsWith('•') || paragraph.startsWith('-') || paragraph.startsWith('*')) {
+        // Bullet points - handle with proper indentation
+        const bulletLines = paragraph.split('\n').filter(line => line.trim());
+        
+        for (const bulletLine of bulletLines) {
+          const cleanLine = bulletLine.replace(/^[•\-*]\s*/, '• '); // Normalize bullet
+          const lines = pdf.splitTextToSize(cleanLine, maxWidth - 10); // Indent bullets
+          
+          for (let j = 0; j < lines.length; j++) {
+            if (currentY + lineHeight > pageHeight - margin) {
+              pdf.addPage();
+              currentY = margin;
+            }
+            
+            const indentX = j === 0 ? margin + 5 : margin + 8; // First line less indented
+            pdf.text(lines[j], indentX, currentY);
+            currentY += lineHeight;
+          }
+        }
+        currentY += paragraphSpacing;
+        
+      } else {
+        // Regular paragraph
+        const lines = pdf.splitTextToSize(paragraph, maxWidth);
+        
+        for (const line of lines) {
+          if (currentY + lineHeight > pageHeight - margin) {
+            pdf.addPage();
+            currentY = margin;
+          }
+          pdf.text(line, margin, currentY);
+          currentY += lineHeight;
+        }
+        currentY += paragraphSpacing;
+      }
     }
 
     // Download the PDF
     pdf.save(fileName);
+    console.log('Cover letter PDF export completed successfully');
+    
   } catch (error) {
     console.error('Error exporting cover letter to PDF:', error);
     
-    // Provide more specific error messages based on the error type
+    // Provide more specific error messages
     if (error instanceof Error) {
-      if (error.message.includes('oklch') || error.message.includes('color')) {
-        throw new Error('PDF export failed due to unsupported color formats. Please try again or contact support.');
-      } else if (error.message.includes('window')) {
+      if (error.message.includes('window')) {
         throw new Error('PDF export is not available in this environment. Please try refreshing the page.');
-      } else if (error.message.includes('Canvas')) {
-        throw new Error('PDF export failed during image generation. Please try again.');
       } else {
         throw new Error(`PDF export failed: ${error.message}`);
       }
