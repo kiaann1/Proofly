@@ -11,7 +11,7 @@ import CVPreview from '../../components/cv/CVPreview';
 import ATSChecker from '../../components/cv/ATSChecker';
 import ContentChecker from '../../components/cv/ContentChecker';
 import { cvStorage } from '../../lib/storage';
-import { exportToPDF, exportToDOCX } from '../../lib/exportUtils';
+import { exportToPDF, exportToPDFWithPageBreaks, exportToDOCX } from '../../lib/exportUtils';
 
 const defaultPersonalInfo: PersonalInfo = {
   name: '',
@@ -129,11 +129,11 @@ export default function CVBuilderPage() {
     
     try {
       setIsExporting(true);
-      console.log('Starting PDF export from main page...');
+      console.log('Starting enhanced PDF export with page breaks...');
       
-      // Try to export directly - the export function will handle creating temporary elements if needed
-      await exportToPDF(cvData, 'cv-preview');
-      console.log('PDF export completed successfully');
+      // Use the enhanced PDF export with proper page breaks
+      await exportToPDFWithPageBreaks(cvData);
+      console.log('Enhanced PDF export completed successfully');
     } catch (error) {
       console.error('Error exporting PDF:', error);
       alert(`Failed to export PDF: ${error instanceof Error ? error.message : 'Please ensure your CV has content and try again.'}`);

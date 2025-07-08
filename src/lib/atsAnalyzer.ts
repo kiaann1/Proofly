@@ -1,5 +1,344 @@
-import { CVData, ATSAnalysis, KeywordAnalysis, FormatAnalysis, ContentAnalysis, ATSSuggestion, JobDescription } from '../types';
+import { CVData, ATSAnalysis, KeywordAnalysis, FormatAnalysis, ContentAnalysis, ATSSuggestion, JobDescription, Experience, Education, Certification } from '../types';
 
+/**
+ * Enhanced ATS Format Checker based on ResumeHelp recommendations
+ * Checks for ATS-friendly formatting issues that can cause parsing failures
+ */
+interface ATSFormatIssue {
+  type: 'graphics' | 'special_chars' | 'font' | 'layout' | 'headers' | 'typos' | 'file_format';
+  severity: 'critical' | 'high' | 'medium' | 'low';
+  message: string;
+  suggestion: string;
+  position?: string;
+}
+
+interface EnhancedFormatAnalysis extends FormatAnalysis {
+  formatIssues: ATSFormatIssue[];
+  atsCompatibilityScore: number; // 0-100, with 80+ being ATS-friendly
+  readableByATS: boolean;
+}
+
+/**
+ * Check for ATS-unfriendly formatting issues
+ */
+function checkATSFormatting(cvData: CVData): ATSFormatIssue[] {
+  const issues: ATSFormatIssue[] = [];
+  
+  // Combine all text content for analysis
+  const allText = [
+    cvData.personalInfo?.name || '',
+    cvData.personalInfo?.email || '',
+    cvData.personalInfo?.phone || '',
+    cvData.personalInfo?.location || '',
+    cvData.personalInfo?.summary || '',
+    ...cvData.experience?.map((exp: Experience) => `${exp.company} ${exp.position} ${exp.description} ${exp.achievements?.join(' ') || ''}`) || [],
+    ...cvData.education?.map((edu: Education) => `${edu.institution} ${edu.degree} ${edu.gpa || ''}`) || [],
+    cvData.skills?.join(' ') || '',
+    ...cvData.certifications?.map((cert: Certification) => `${cert.name} ${cert.issuer}`) || []
+  ].join(' ');
+  
+  // 1. Check for special characters that can break ATS parsing
+  const problematicChars = /[•▪▫►▸‣⁃◦‧∙❖❯❱⟩]/g;
+  if (problematicChars.test(allText)) {
+    issues.push({
+      type: 'special_chars',
+      severity: 'high',
+      message: 'Contains special bullet characters that may not be readable by ATS',
+      suggestion: 'Use standard bullet points (•) or hyphens (-) instead of decorative bullets',
+      position: 'Throughout CV'
+    });
+  }
+  
+  // 2. Check for graphics/images indicators (we can't detect actual images, but look for references)
+  const imageReferences = /\b(image|photo|picture|logo|graphic|chart|diagram)\b/gi;
+  if (imageReferences.test(allText)) {
+    issues.push({
+      type: 'graphics',
+      severity: 'critical',
+      message: 'References to images or graphics detected',
+      suggestion: 'Remove all images, photos, charts, and graphics as ATS cannot read visual elements',
+      position: 'Visual elements'
+    });
+  }
+  
+  // 3. Check for typos and misspellings (basic check)
+  const commonTypos = [
+    { wrong: 'recieve', correct: 'receive' },
+    { wrong: 'seperate', correct: 'separate' },
+    { wrong: 'occured', correct: 'occurred' },
+    { wrong: 'definately', correct: 'definitely' },
+    { wrong: 'managment', correct: 'management' },
+    { wrong: 'developement', correct: 'development' },
+    { wrong: 'experiance', correct: 'experience' },
+    { wrong: 'responsibilty', correct: 'responsibility' },
+    { wrong: 'acheivement', correct: 'achievement' },
+    { wrong: 'sucessful', correct: 'successful' }
+  ];
+  
+  commonTypos.forEach(typo => {
+    const typoRegex = new RegExp(`\\b${typo.wrong}\\b`, 'gi');
+    if (typoRegex.test(allText)) {
+      issues.push({
+        type: 'typos',
+        severity: 'high',
+        message: `Potential typo detected: "${typo.wrong}"`,
+        suggestion: `Check spelling - should be "${typo.correct}"`,
+        position: 'Content'
+      });
+    }
+  });
+  
+  // 4. Check for header/footer content (simulate by checking for contact info placement)
+  if (cvData.personalInfo?.name && cvData.personalInfo.name.length < 3) {
+    issues.push({
+      type: 'headers',
+      severity: 'medium',
+      message: 'Name appears to be too short or in header/footer',
+      suggestion: 'Ensure your name and contact information are in the main document body, not in headers/footers',
+      position: 'Personal Information'
+    });
+  }
+  
+  // 5. Check for creative formatting indicators
+  const creativeFmatting = /\b(creative|unique|innovative)\s+(layout|design|format|template)\b/gi;
+  if (creativeFmatting.test(allText)) {
+    issues.push({
+      type: 'layout',
+      severity: 'medium',
+      message: 'References to creative formatting detected',
+      suggestion: 'Use a traditional, simple layout with standard section headings for better ATS compatibility',
+      position: 'Layout'
+    });
+  }
+  
+  // 6. Check for insufficient content (empty sections)
+  const emptySections = [];
+  if (!cvData.personalInfo?.summary || cvData.personalInfo.summary.trim().length < 50) {
+    emptySections.push('Professional Summary');
+  }
+  if (!cvData.experience || cvData.experience.length === 0) {
+    emptySections.push('Work Experience');
+  }
+  if (!cvData.skills || cvData.skills.length === 0) {
+    emptySections.push('Skills');
+  }
+  
+  if (emptySections.length > 0) {
+    issues.push({
+      type: 'layout',
+      severity: 'critical',
+      message: `Missing or insufficient content in: ${emptySections.join(', ')}`,
+      suggestion: 'Add substantial content to all major CV sections. ATS scores lower for incomplete profiles.',
+      position: 'Content completeness'
+    });
+  }
+  
+  return issues;
+}
+
+/**
+ * Calculate ATS compatibility score based on format analysis
+ */
+function calculateATSCompatibilityScore(formatIssues: ATSFormatIssue[], cvData: CVData): number {
+  let score = 100;
+  
+  // Deduct points based on issue severity
+  formatIssues.forEach(issue => {
+    switch (issue.severity) {
+      case 'critical':
+        score -= 25;
+        break;
+      case 'high':
+        score -= 15;
+        break;
+      case 'medium':
+        score -= 8;
+        break;
+      case 'low':
+        score -= 3;
+        break;
+    }
+  });
+  
+  // Additional scoring based on content completeness
+  const contentScore = calculateContentCompletenessScore(cvData);
+  score = Math.min(score, contentScore + 20); // Content affects overall ATS score
+  
+  return Math.max(0, Math.round(score));
+}
+
+/**
+ * Calculate content completeness score (impacts ATS success)
+ */
+function calculateContentCompletenessScore(cvData: CVData): number {
+  let score = 0;
+  
+  // Personal information completeness (20 points)
+  if (cvData.personalInfo?.name && cvData.personalInfo.name.length > 2) score += 5;
+  if (cvData.personalInfo?.email && cvData.personalInfo.email.includes('@')) score += 5;
+  if (cvData.personalInfo?.phone && cvData.personalInfo.phone.length > 5) score += 5;
+  if (cvData.personalInfo?.summary && cvData.personalInfo.summary.length > 100) score += 5;
+  
+  // Work experience completeness (40 points)
+  if (cvData.experience && cvData.experience.length > 0) {
+    score += 15;
+    const avgExpLength = cvData.experience.reduce((acc: number, exp: Experience) => 
+      acc + (exp.description?.length || 0), 0) / cvData.experience.length;
+    if (avgExpLength > 100) score += 15;
+    
+    const hasAchievements = cvData.experience.some((exp: Experience) => 
+      exp.achievements && exp.achievements.length > 0);
+    if (hasAchievements) score += 10;
+  }
+  
+  // Skills section (20 points)
+  if (cvData.skills && cvData.skills.length > 0) {
+    score += 10;
+    if (cvData.skills.length >= 8) score += 10;
+  }
+  
+  // Education section (10 points)
+  if (cvData.education && cvData.education.length > 0) {
+    score += 10;
+  }
+  
+  // Additional sections (10 points)
+  let additionalSections = 0;
+  if (cvData.certifications && cvData.certifications.length > 0) additionalSections++;
+  if (cvData.languages && cvData.languages.length > 0) additionalSections++;
+  
+  score += Math.min(additionalSections * 5, 10);
+  
+  return Math.min(score, 80); // Max 80 from content alone
+}
+
+/**
+ * Enhanced keyword matching based on ATS best practices
+ */
+function enhancedKeywordMatching(cvText: string, jobDescription: string): {
+  matchedKeywords: string[];
+  missingKeywords: string[];
+  keywordDensity: number;
+  exactMatches: number;
+  synonymMatches: number;
+} {
+  const cvLower = cvText.toLowerCase();
+  const jobLower = jobDescription.toLowerCase();
+  
+  // Extract keywords from job description with better parsing
+  const jobKeywords = extractJobKeywords(jobDescription);
+  
+  const matchedKeywords: string[] = [];
+  const missingKeywords: string[] = [];
+  let exactMatches = 0;
+  let synonymMatches = 0;
+  
+  jobKeywords.forEach(keyword => {
+    const keywordLower = keyword.toLowerCase();
+    
+    // Check for exact matches (with word boundaries)
+    const exactRegex = new RegExp(`\\b${keywordLower.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+    if (exactRegex.test(cvLower)) {
+      matchedKeywords.push(keyword);
+      exactMatches++;
+    } else {
+      // Check for synonyms and variations
+      const synonyms = getKeywordSynonyms(keyword);
+      const foundSynonym = synonyms.some(synonym => {
+        const synonymRegex = new RegExp(`\\b${synonym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+        return synonymRegex.test(cvLower);
+      });
+      
+      if (foundSynonym) {
+        matchedKeywords.push(keyword);
+        synonymMatches++;
+      } else {
+        missingKeywords.push(keyword);
+      }
+    }
+  });
+  
+  // Calculate keyword density
+  const totalWords = cvText.split(/\s+/).length;
+  const keywordDensity = (matchedKeywords.length / totalWords) * 100;
+  
+  return {
+    matchedKeywords,
+    missingKeywords,
+    keywordDensity: Math.round(keywordDensity * 100) / 100,
+    exactMatches,
+    synonymMatches
+  };
+}
+
+/**
+ * Extract job keywords with improved parsing
+ */
+function extractJobKeywords(jobDescription: string): string[] {
+  const keywords = new Set<string>();
+  
+  // Extract skills from common patterns
+  const skillPatterns = [
+    /(?:required|must have|essential)[\s\S]*?([A-Za-z][A-Za-z\s\-\.]{2,30})/gi,
+    /(?:experience with|proficient in|knowledge of|familiar with)[\s\S]*?([A-Za-z][A-Za-z\s\-\.]{2,30})/gi,
+    /(?:skills?|technologies?|tools?)[\s\S]*?([A-Za-z][A-Za-z\s\-\.]{2,30})/gi
+  ];
+  
+  skillPatterns.forEach(pattern => {
+    let match;
+    while ((match = pattern.exec(jobDescription)) !== null) {
+      const skill = match[1].trim();
+      if (skill.length > 2 && skill.length < 30) {
+        keywords.add(skill);
+      }
+    }
+  });
+  
+  // Extract from bullet points and lists
+  const bulletRegex = /[•·▪▫-]\s*([A-Za-z][A-Za-z\s\-\.]{2,30})/g;
+  let match;
+  while ((match = bulletRegex.exec(jobDescription)) !== null) {
+    const skill = match[1].trim();
+    if (skill.length > 2 && skill.length < 30) {
+      keywords.add(skill);
+    }
+  }
+  
+  return Array.from(keywords);
+}
+
+/**
+ * Get synonyms for keywords to improve matching
+ */
+function getKeywordSynonyms(keyword: string): string[] {
+  const synonymMap: { [key: string]: string[] } = {
+    'javascript': ['js', 'ecmascript'],
+    'typescript': ['ts'],
+    'react': ['reactjs', 'react.js'],
+    'vue': ['vuejs', 'vue.js'],
+    'angular': ['angularjs'],
+    'node': ['nodejs', 'node.js'],
+    'python': ['py'],
+    'artificial intelligence': ['ai', 'machine learning', 'ml'],
+    'user interface': ['ui'],
+    'user experience': ['ux'],
+    'database': ['db', 'databases'],
+    'management': ['managing', 'manage'],
+    'development': ['developing', 'develop'],
+    'analysis': ['analyzing', 'analyze', 'analytical'],
+    'leadership': ['leading', 'lead'],
+    'communication': ['communicate', 'communicating'],
+    'collaboration': ['collaborate', 'collaborating'],
+    'problem solving': ['problem-solving', 'troubleshooting']
+  };
+  
+  const keywordLower = keyword.toLowerCase();
+  return synonymMap[keywordLower] || [];
+}
+
+/**
+ * Detect industry from text using keyword matching
+ */
 function detectIndustry(text: string): string {
   const textLower = text.toLowerCase();
   
@@ -380,29 +719,40 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
   return new Promise((resolve) => {
     setTimeout(() => {
       const jobDescription = parseJobDescription(jobDescriptionText);
+      const cvText = getCVText(cvData); // Declare once at the top
       
-      // Perform individual analyses
+      // Perform individual analyses including new ATS format checking
       const keywordAnalysis = analyzeKeywords(cvData, jobDescription);
       const formatAnalysis = analyzeFormat(cvData);
       const contentAnalysis = analyzeContent(cvData);
       
-      // Calculate overall score with different weighting based on job description availability
+      // New enhanced ATS format checking based on ResumeHelp recommendations
+      const atsFormatIssues = checkATSFormatting(cvData);
+      const atsCompatibilityScore = calculateATSCompatibilityScore(atsFormatIssues, cvData);
+      
+      // Enhanced keyword matching for better accuracy
+      const enhancedKeywordMatch = enhancedKeywordMatching(cvText, jobDescriptionText);
+      
+      // Calculate overall score with new ATS compatibility weighting
       let baseScore;
       if (!jobDescriptionText.trim()) {
-        // When no job description is provided, severely limit scoring potential
-        // Focus on basic format and content completeness only
+        // When no job description is provided, focus on ATS compatibility and content
         baseScore = Math.round(
-          formatAnalysis.score * 0.4 + // 40% weight on format
-          contentAnalysis.score * 0.6   // 60% weight on content
+          atsCompatibilityScore * 0.5 + // 50% weight on ATS compatibility
+          formatAnalysis.score * 0.2 + // 20% weight on general format
+          contentAnalysis.score * 0.3   // 30% weight on content
         );
         // Apply major penalty for lack of job description context
-        baseScore = Math.min(baseScore, 45); // Hard cap at 45% without job description
+        baseScore = Math.min(baseScore, 50); // Slightly higher cap with new scoring
       } else {
         // Normal weighting when job description is available
         baseScore = Math.round(
-          keywordAnalysis.score * 0.4 + // 40% weight on keywords
-          formatAnalysis.score * 0.3 + // 30% weight on format
-          contentAnalysis.score * 0.3   // 30% weight on content
+          enhancedKeywordMatch.matchedKeywords.length > 0 ? 
+            (enhancedKeywordMatch.exactMatches + enhancedKeywordMatch.synonymMatches) * 2 : // Keyword relevance
+            keywordAnalysis.score * 0.3 + // 30% weight on keywords
+          atsCompatibilityScore * 0.3 + // 30% weight on ATS compatibility
+          formatAnalysis.score * 0.2 + // 20% weight on general format
+          contentAnalysis.score * 0.2   // 20% weight on content
         );
       }
       
@@ -415,7 +765,6 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
       }
       
       // Penalty for very sparse CVs
-      const cvText = getCVText(cvData);
       if (cvText.length < 200) {
         overallScore -= 25; // Severe penalty for very short CVs
       } else if (cvText.length < 500) {
@@ -454,8 +803,8 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
       // Ensure minimum realistic floor but keep it low for poor CVs
       overallScore = Math.max(15, overallScore);
       
-      // Generate suggestions based on analysis
-      const suggestions = generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData);
+      // Generate suggestions based on analysis including new ATS format issues
+      const suggestions = generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData, atsFormatIssues, enhancedKeywordMatch);
       
       // Create overall feedback
       const overallFeedback = generateOverallFeedback(overallScore, keywordAnalysis, formatAnalysis, contentAnalysis);
@@ -765,10 +1114,45 @@ function generateSuggestions(
   formatAnalysis: FormatAnalysis,
   contentAnalysis: ContentAnalysis,
   jobDescription: JobDescription,
-  cvData?: CVData
+  cvData?: CVData,
+  atsFormatIssues?: ATSFormatIssue[],
+  enhancedKeywordMatch?: any
 ): ATSSuggestion[] {
   const suggestions: ATSSuggestion[] = [];
   let suggestionId = 1;
+  
+  // Add ATS format issue suggestions first (highest priority)
+  if (atsFormatIssues && atsFormatIssues.length > 0) {
+    atsFormatIssues.forEach(issue => {
+      suggestions.push({
+        id: (suggestionId++).toString(),
+        type: 'format',
+        priority: issue.severity === 'critical' ? 'high' : issue.severity === 'high' ? 'medium' : 'low',
+        title: `ATS Compatibility: ${issue.type}`,
+        description: issue.message,
+        actionable: true,
+        implementationGuide: issue.suggestion,
+        whyImportant: 'ATS systems may fail to parse your CV correctly, causing it to be rejected automatically.'
+      });
+    });
+  }
+  
+  // Enhanced keyword suggestions
+  if (enhancedKeywordMatch && enhancedKeywordMatch.missingKeywords.length > 0) {
+    const criticalMissing = enhancedKeywordMatch.missingKeywords.slice(0, 5); // Top 5 missing
+    if (criticalMissing.length > 0) {
+      suggestions.push({
+        id: (suggestionId++).toString(),
+        type: 'keyword',
+        priority: 'high',
+        title: 'Missing Critical Keywords',
+        description: `Your CV is missing key terms that recruiters are looking for: ${criticalMissing.join(', ')}`,
+        actionable: true,
+        implementationGuide: 'Review the job description and incorporate these relevant keywords naturally into your experience descriptions and skills section.',
+        whyImportant: 'ATS systems score CVs higher when they contain relevant keywords from the job description.'
+      });
+    }
+  }
   
   // Check if job description is provided
   const hasJobDescription = jobDescription.text.trim().length > 0;

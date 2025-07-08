@@ -1064,3 +1064,415 @@ export async function exportCoverLetterToDOCX(
     throw new Error('Failed to export DOCX. Please try again.');
   }
 }
+
+/**
+ * Enhanced PDF export with proper page breaks
+ * Uses a more sophisticated approach to handle content across multiple pages
+ */
+export async function exportToPDFWithPageBreaks(cvData: CVData): Promise<void> {
+  try {
+    console.log('Enhanced PDF export with page breaks started');
+    
+    // Check if we're in browser environment
+    if (typeof window === 'undefined') {
+      throw new Error('PDF export is only available in browser environment');
+    }
+
+    // Create PDF instance
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+      compress: false,
+      precision: 2
+    });
+
+    const pageWidth = 210; // A4 width in mm
+    const pageHeight = 297; // A4 height in mm
+    const margin = 20; // Margins in mm
+    const contentWidth = pageWidth - (margin * 2);
+    const contentHeight = pageHeight - (margin * 2);
+    
+    let currentY = margin;
+    let isFirstPage = true;
+
+    // Set up fonts and styles
+    pdf.setFont('helvetica');
+    
+    // Helper function to check page break and handle content continuation
+    const checkPageBreak = (requiredHeight: number, forceBreak: boolean = false): boolean => {
+      if (forceBreak || (currentY + requiredHeight > pageHeight - margin - 10)) { // Extra margin buffer
+        pdf.addPage();
+        currentY = margin;
+        return true;
+      }
+      return false;
+    };
+
+    // Helper function to add text with word wrapping and improved spacing
+    const addText = (text: string, x: number, y: number, options: {
+      fontSize?: number;
+      fontStyle?: 'normal' | 'bold' | 'italic';
+      color?: string;
+      maxWidth?: number;
+      lineHeight?: number;
+      align?: 'left' | 'center' | 'right';
+    } = {}): number => {
+      const {
+        fontSize = 10,
+        fontStyle = 'normal',
+        color = '#000000',
+        maxWidth = contentWidth,
+        lineHeight = fontSize * 0.4,
+        align = 'left'
+      } = options;
+
+      pdf.setFontSize(fontSize);
+      pdf.setFont('helvetica', fontStyle);
+      
+      // Convert hex color to RGB
+      if (color.startsWith('#')) {
+        const r = parseInt(color.slice(1, 3), 16);
+        const g = parseInt(color.slice(3, 5), 16);
+        const b = parseInt(color.slice(5, 7), 16);
+        pdf.setTextColor(r, g, b);
+      }
+
+      // Handle empty text
+      if (!text || text.trim() === '') {
+        return y;
+      }
+
+      // Split text into lines that fit within maxWidth
+      const lines = pdf.splitTextToSize(text.trim(), maxWidth);
+      
+      for (let i = 0; i < lines.length; i++) {
+        // Check if we need a page break for each line
+        if (checkPageBreak(lineHeight + 2)) {
+          y = currentY;
+        }
+        
+        let textX = x;
+        if (align === 'center') {
+          textX = x + (maxWidth / 2);
+        } else if (align === 'right') {
+          textX = x + maxWidth;
+        }
+        
+        pdf.text(lines[i], textX, y + (i * lineHeight), { align: align });
+      }
+      
+      return y + (lines.length * lineHeight);
+    };
+
+    // Helper function to add section with proper spacing
+    const addSection = (title: string, content: () => number): void => {
+      // Add some space before section (except for first section)
+      if (currentY > margin + 10) {
+        currentY += 8;
+      }
+      
+      // Check if we need page break for section title
+      checkPageBreak(15);
+      
+      // Add section title
+      currentY = addText(title, margin, currentY, {
+        fontSize: 14,
+        fontStyle: 'bold',
+        color: '#1f2937'
+      });
+      
+      // Add underline
+      pdf.setDrawColor(229, 231, 235); // Light gray
+      pdf.setLineWidth(0.5);
+      pdf.line(margin, currentY + 2, margin + contentWidth, currentY + 2);
+      
+      currentY += 6;
+      
+      // Add section content
+      currentY = content();
+    };
+
+    // Personal Information Header
+    const addPersonalInfo = (): number => {
+      let y = currentY;
+      
+      // Name
+      if (cvData.personalInfo.name) {
+        y = addText(cvData.personalInfo.name, margin, y, {
+          fontSize: 20,
+          fontStyle: 'bold',
+          color: '#1f2937'
+        });
+        y += 4;
+      }
+      
+      // Contact information in a single line if possible
+      const contactInfo: string[] = [];
+      if (cvData.personalInfo.email) contactInfo.push(cvData.personalInfo.email);
+      if (cvData.personalInfo.phone) contactInfo.push(cvData.personalInfo.phone);
+      if (cvData.personalInfo.location) contactInfo.push(cvData.personalInfo.location);
+      
+      if (contactInfo.length > 0) {
+        y = addText(contactInfo.join(' • '), margin, y, {
+          fontSize: 10,
+          color: '#6b7280'
+        });
+        y += 2;
+      }
+      
+      // Links
+      const links: string[] = [];
+      if (cvData.personalInfo.website) {
+        links.push(`🌐 ${cvData.personalInfo.website.replace(/^https?:\/\//, '')}`);
+      }
+      if (cvData.personalInfo.linkedin) {
+        links.push(`💼 ${cvData.personalInfo.linkedin.replace(/^https?:\/\/(www\.)?linkedin\.com\/in\//, '')}`);
+      }
+      if (cvData.personalInfo.github) {
+        links.push(`🐙 ${cvData.personalInfo.github.replace(/^https?:\/\/(www\.)?github\.com\//, '')}`);
+      }
+      
+      if (links.length > 0) {
+        y = addText(links.join(' • '), margin, y, {
+          fontSize: 9,
+          color: '#6b7280'
+        });
+        y += 6;
+      }
+      
+      return y;
+    };
+
+    // Professional Summary
+    const addSummary = (): number => {
+      let y = currentY;
+      if (cvData.personalInfo.summary) {
+        y = addText(cvData.personalInfo.summary, margin, y, {
+          fontSize: 10,
+          lineHeight: 4.5
+        });
+        y += 4;
+      }
+      return y;
+    };
+
+    // Work Experience
+    const addExperience = (): number => {
+      let y = currentY;
+      
+      cvData.experience.forEach((exp, index) => {
+        // Calculate estimated height for this experience entry
+        const estimatedHeight = 35 + (exp.achievements ? exp.achievements.length * 4 : 0);
+        
+        // Check if we need a page break for this experience entry
+        if (checkPageBreak(estimatedHeight)) {
+          y = currentY;
+        }
+        
+        // Position and Company
+        const positionText = `${exp.position}`;
+        y = addText(positionText, margin, y, {
+          fontSize: 12,
+          fontStyle: 'bold',
+          color: '#1f2937'
+        });
+        
+        // Company name
+        y = addText(exp.company, margin, y, {
+          fontSize: 11,
+          color: '#3b82f6' // Blue color for company
+        });
+        
+        // Dates and Location
+        const startDate = exp.startDate ? new Date(exp.startDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '';
+        const endDate = exp.current ? 'Present' : (exp.endDate ? new Date(exp.endDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '');
+        const dateRange = `${startDate} - ${endDate}`;
+        const locationAndDate = exp.location ? `${exp.location} • ${dateRange}` : dateRange;
+        
+        y = addText(locationAndDate, margin, y, {
+          fontSize: 9,
+          color: '#6b7280',
+          fontStyle: 'italic'
+        });
+        y += 3;
+        
+        // Description
+        if (exp.description && exp.description.trim()) {
+          y = addText(exp.description, margin, y, {
+            fontSize: 10,
+            lineHeight: 4.5
+          });
+          y += 3;
+        }
+        
+        // Achievements with better formatting
+        if (exp.achievements && exp.achievements.length > 0) {
+          exp.achievements.forEach(achievement => {
+            if (achievement.trim()) {
+              // Check for page break before each achievement
+              if (checkPageBreak(8)) {
+                y = currentY;
+              }
+              
+              y = addText(`• ${achievement.trim()}`, margin + 4, y, {
+                fontSize: 10,
+                lineHeight: 4.5,
+                color: '#374151'
+              });
+              y += 2;
+            }
+          });
+        }
+        
+        // Add space between experiences (but not after the last one)
+        if (index < cvData.experience.length - 1) {
+          y += 6;
+        }
+        
+        currentY = y;
+      });
+      
+      return y;
+    };
+
+    // Skills
+    const addSkills = (): number => {
+      let y = currentY;
+      
+      if (cvData.skills && cvData.skills.length > 0) {
+        // Group skills into lines that fit the page width
+        const skillsText = cvData.skills.join(' • ');
+        y = addText(skillsText, margin, y, {
+          fontSize: 10,
+          lineHeight: 4.5
+        });
+        y += 4;
+      }
+      
+      return y;
+    };
+
+    // Education
+    const addEducation = (): number => {
+      let y = currentY;
+      
+      cvData.education.forEach((edu, index) => {
+        // Check for page break
+        const estimatedHeight = 20;
+        checkPageBreak(estimatedHeight);
+        y = currentY;
+        
+        // Degree and Institution
+        const educationTitle = `${edu.degree} - ${edu.institution}`;
+        y = addText(educationTitle, margin, y, {
+          fontSize: 11,
+          fontStyle: 'bold',
+          color: '#1f2937'
+        });
+        
+        // Dates and Grade
+        const startDate = edu.startDate ? new Date(edu.startDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '';
+        const endDate = edu.current ? 'Present' : (edu.endDate ? new Date(edu.endDate).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }) : '');
+        const dateRange = `${startDate} - ${endDate}`;
+        const gradeInfo = edu.gpa ? ` • Grade: ${edu.gpa}` : '';
+        const locationAndDate = `${edu.location || ''} • ${dateRange}${gradeInfo}`;
+        
+        y = addText(locationAndDate, margin, y, {
+          fontSize: 9,
+          color: '#6b7280'
+        });
+        
+        // Description
+        if (edu.description) {
+          y += 2;
+          y = addText(edu.description, margin, y, {
+            fontSize: 10,
+            lineHeight: 4
+          });
+        }
+        
+        // Add space between entries
+        if (index < cvData.education.length - 1) {
+          y += 4;
+        }
+        
+        currentY = y;
+      });
+      
+      return y;
+    };
+
+    // Certifications
+    const addCertifications = (): number => {
+      let y = currentY;
+      
+      cvData.certifications.forEach((cert, index) => {
+        const certText = `${cert.name} - ${cert.issuer}`;
+        const dateText = cert.date ? ` (${new Date(cert.date).getFullYear()})` : '';
+        
+        y = addText(`• ${certText}${dateText}`, margin, y, {
+          fontSize: 10,
+          lineHeight: 4
+        });
+        
+        currentY = y;
+      });
+      
+      return y;
+    };
+
+    // Languages
+    const addLanguages = (): number => {
+      let y = currentY;
+      
+      if (cvData.languages && cvData.languages.length > 0) {
+        const languagesList = cvData.languages.map(lang => `${lang.name} (${lang.proficiency})`).join(' • ');
+        y = addText(languagesList, margin, y, {
+          fontSize: 10,
+          lineHeight: 4.5
+        });
+      }
+      
+      return y;
+    };
+
+    // Build the PDF content
+    currentY = addPersonalInfo();
+    currentY += 6;
+
+    // Add sections in order
+    if (cvData.personalInfo.summary) {
+      addSection('Professional Summary', addSummary);
+    }
+    
+    if (cvData.experience && cvData.experience.length > 0) {
+      addSection('Professional Experience', addExperience);
+    }
+    
+    if (cvData.skills && cvData.skills.length > 0) {
+      addSection('Skills', addSkills);
+    }
+    
+    if (cvData.education && cvData.education.length > 0) {
+      addSection('Education', addEducation);
+    }
+    
+    if (cvData.certifications && cvData.certifications.length > 0) {
+      addSection('Certifications', addCertifications);
+    }
+    
+    if (cvData.languages && cvData.languages.length > 0) {
+      addSection('Languages', addLanguages);
+    }
+
+    // Save the PDF
+    const fileName = `${cvData.personalInfo.name || 'CV'}_Resume.pdf`;
+    pdf.save(fileName);
+    
+    console.log('Enhanced PDF export with page breaks completed successfully');
+  } catch (error) {
+    console.error('Error in enhanced PDF export:', error);
+    throw new Error(`Failed to export PDF with page breaks: ${error instanceof Error ? error.message : 'Unknown error'}`);
+  }
+}

@@ -5,7 +5,7 @@
 
 import { useState } from 'react';
 import { CVData, CVTemplate, CVStyling } from '../../types';
-import { exportToPDF, exportToDOCX } from '../../lib/exportUtils';
+import { exportToPDF, exportToPDFWithPageBreaks, exportToDOCX } from '../../lib/exportUtils';
 import CVStylingComponent from './CVStyling';
 
 interface CVPreviewProps {
@@ -69,8 +69,8 @@ export default function CVPreview({ cvData, onTemplateChange, onStylingChange }:
         throw new Error('Preview element has no dimensions. Please ensure your CV has content.');
       }
       
-      await exportToPDF(cvData, 'cv-preview');
-      console.log('PDF export completed successfully from CVPreview');
+      await exportToPDFWithPageBreaks(cvData);
+      console.log('Enhanced PDF export with page breaks completed successfully from CVPreview');
     } catch (error) {
       console.error('Error exporting PDF from CVPreview:', error);
       alert(`Failed to export PDF: ${error instanceof Error ? error.message : 'Please ensure your CV has content and try again.'}`);
