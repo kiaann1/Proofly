@@ -329,37 +329,37 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
   };
 
   const renderJobDescriptionTab = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       <div className="text-center sm:text-left">
-        <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 mb-4">
+        <h2 className="text-lg sm:text-xl md:text-2xl font-semibold text-gray-900 mb-3 sm:mb-4">
           Job Description Analysis
         </h2>
-        <p className="text-gray-600 mb-6 text-sm sm:text-base">
+        <p className="text-gray-600 mb-4 sm:mb-6 text-sm sm:text-base leading-relaxed">
           Paste a job description to get targeted ATS optimisation recommendations.
         </p>
       </div>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <div className="w-full">
+        <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">
           Job Description
         </label>        
         <textarea
           value={jobDescription}
           onChange={(e) => handleJobDescriptionChange(e.target.value)}
-          rows={8}
-          className="w-full px-3 py-2 sm:px-4 sm:py-3 border border-gray-300 rounded-lg sm:rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm sm:text-base"
+          rows={10}
+          className="w-full px-3 py-3 sm:px-4 sm:py-4 md:px-5 md:py-4 border border-gray-300 rounded-lg sm:rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none text-sm sm:text-base leading-relaxed min-h-[200px] sm:min-h-[240px]"
           placeholder="Paste the full job description here. Include requirements, qualifications, responsibilities, and preferred skills for the most accurate analysis..."
         />
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs sm:text-sm text-gray-500 mt-2 sm:mt-3">
           The more detailed the job description, the better the ATS analysis will be.
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
         <button
           onClick={handleAnalyze}
           disabled={isAnalyzing}
-          className="w-full sm:w-auto px-6 py-3 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium shadow-lg hover:shadow-xl"
+          className="w-full sm:w-auto px-6 py-3 sm:py-4 bg-blue-600 text-white rounded-lg sm:rounded-xl hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 font-medium shadow-lg hover:shadow-xl text-sm sm:text-base"
         >
           {isAnalyzing ? (
             <>
@@ -368,7 +368,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             </>
           ) : (
             <>
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
               </svg>
               Analyse CV
@@ -377,7 +377,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
         </button>
         
         {jobDescription && (
-          <div className="text-sm text-gray-500 text-center sm:text-left">
+          <div className="text-xs sm:text-sm text-gray-500 text-center sm:text-left px-3 py-2 bg-gray-50 rounded-lg">
             {jobDescription.split(' ').length} words • {jobDescription.length} characters
           </div>
         )}
@@ -385,8 +385,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
 
       {!jobDescription && (
         <div className="bg-blue-50 border border-blue-200 rounded-lg sm:rounded-xl p-4 sm:p-6">
-          <h3 className="text-sm font-medium text-blue-900 mb-3">💡 Pro Tips</h3>
-          <ul className="text-sm text-blue-700 space-y-2">
+          <h3 className="text-sm sm:text-base font-medium text-blue-900 mb-3">💡 Pro Tips</h3>
+          <ul className="text-sm sm:text-base text-blue-700 space-y-2">
             <li>• Copy the entire job posting, not just the title</li>
             <li>• Include required and preferred qualifications</li>
             <li>• Don&apos;t edit or summarise - paste the full text</li>
@@ -413,15 +413,15 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
     }
 
     return (
-      <div className="space-y-6">
-        {/* Overall Score */}
-        <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
-          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
-            <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 text-center sm:text-left">
+      <div className="space-y-4 sm:space-y-6">
+        {/* Overall Score - Improved mobile layout */}
+        <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 lg:p-8 shadow-sm">
+          <div className="flex flex-col sm:flex-row items-center justify-between mb-4 sm:mb-6 gap-4">
+            <h2 className="text-lg sm:text-xl lg:text-2xl font-semibold text-gray-900 text-center sm:text-left">
               ATS Compatibility Score
             </h2>
-            <div className="relative w-20 h-20 sm:w-24 sm:h-24">
-              <svg className="w-20 h-20 sm:w-24 sm:h-24 transform -rotate-90" viewBox="0 0 100 100">
+            <div className="relative w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32">
+              <svg className="w-24 h-24 sm:w-28 sm:h-28 lg:w-32 lg:h-32 transform -rotate-90" viewBox="0 0 100 100">
                 <circle
                   cx="50"
                   cy="50"
@@ -443,7 +443,7 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                 />
               </svg>
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className={`text-2xl sm:text-3xl font-bold ${getScoreColor(analysis.score).split(' ')[0]}`}>
+                <span className={`text-2xl sm:text-3xl lg:text-4xl font-bold ${getScoreColor(analysis.score).split(' ')[0]}`}>
                   {analysis.score}
                 </span>
               </div>
@@ -451,18 +451,18 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
           </div>
           
           <div className="text-center sm:text-left">
-            <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium mb-3 ${getScoreColor(analysis.score)}`}>
+            <div className={`inline-block px-3 py-1.5 sm:px-4 sm:py-2 rounded-full text-sm sm:text-base font-medium mb-3 sm:mb-4 ${getScoreColor(analysis.score)}`}>
               {analysis.score >= 80 ? 'Excellent' : analysis.score >= 60 ? 'Good' : 'Needs Improvement'}
             </div>
             
-            <p className="text-gray-600 text-sm sm:text-base">
+            <p className="text-gray-600 text-sm sm:text-base lg:text-lg leading-relaxed">
               {analysis.overallFeedback}
             </p>
           </div>
         </div>
 
-        {/* Detailed Analysis - Responsive Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
+        {/* Detailed Analysis - Enhanced responsive grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Keyword Analysis */}
           <div className="bg-white rounded-lg sm:rounded-xl border border-gray-200 p-4 sm:p-6 shadow-sm">
             <div className="flex items-center gap-3 mb-4">
@@ -914,16 +914,16 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Mobile-first responsive container */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+      {/* Mobile-first responsive container with improved spacing */}
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-3 sm:py-4 md:py-6 lg:py-8">
 
-        {/* Main Content Card */}
+        {/* Main Content Card with better mobile layout */}
         <div className="bg-white rounded-lg sm:rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           
-          {/* Tab Navigation - Responsive horizontal scroll on mobile */}
+          {/* Tab Navigation - Enhanced mobile responsiveness */}
           <div className="border-b border-gray-200 bg-gray-50">
-            <div className="overflow-x-auto">
-              <nav className="flex min-w-max sm:min-w-0 px-4 sm:px-6">
+            <div className="overflow-x-auto scrollbar-hide">
+              <nav className="flex min-w-max sm:min-w-0 px-3 sm:px-4 md:px-6">
                 {[
                   { id: 'jobdesc', name: 'Job Description', icon: '📋' },
                   { id: 'analysis', name: 'ATS Analysis', icon: '📊' },
@@ -932,13 +932,13 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id as 'jobdesc' | 'analysis' | 'suggestions')}
-                    className={`flex-shrink-0 py-3 sm:py-4 px-3 sm:px-4 border-b-2 font-medium text-sm flex items-center gap-2 transition-colors whitespace-nowrap ${
+                    className={`flex-shrink-0 py-3 sm:py-4 px-3 sm:px-4 md:px-6 border-b-2 font-medium text-xs sm:text-sm md:text-base flex items-center gap-2 transition-colors whitespace-nowrap ${
                       activeTab === tab.id
                         ? 'border-blue-500 text-blue-600 bg-white'
                         : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                     }`}
                   >
-                    <span className="text-base sm:text-lg">{tab.icon}</span>
+                    <span className="text-base sm:text-lg md:text-xl">{tab.icon}</span>
                     <span className="hidden xs:inline sm:inline">{tab.name}</span>
                     {tab.id === 'suggestions' && analysis && analysis.suggestions.length > 0 && (
                       <span className="ml-1 px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs">
@@ -951,8 +951,8 @@ export default function ATSChecker({ cvData, onChange, onSwitchToForm }: ATSChec
             </div>
           </div>
 
-          {/* Tab Content */}
-          <div className="p-4 sm:p-6 lg:p-8">
+          {/* Tab Content - Improved mobile padding */}
+          <div className="p-3 sm:p-4 md:p-6 lg:p-8">
             {activeTab === 'jobdesc' && renderJobDescriptionTab()}
             {activeTab === 'analysis' && renderAnalysisTab()}
             {activeTab === 'suggestions' && renderSuggestionsTab()}
