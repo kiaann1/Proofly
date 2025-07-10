@@ -1,6 +1,3 @@
-/**
- * CV Builder Page - Main interface for building and editing CVs
- */
 'use client';
 
 import { useState, useEffect } from 'react';

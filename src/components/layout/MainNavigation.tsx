@@ -5,14 +5,11 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
-import { useMemo, useState, useCallback, useEffect } from 'react';
-import LoadingSpinner from '../ui/LoadingSpinner';
+import { usePathname } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
 
 export default function MainNavigation() {
   const pathname = usePathname();
-  const router = useRouter();
-  const [loadingRoute, setLoadingRoute] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
@@ -44,21 +41,6 @@ export default function MainNavigation() {
       return () => window.removeEventListener('resize', handleResize);
     }
   }, []);
-
-  const handleNavigation = useCallback((href: string) => {
-    if (href === pathname) return;
-    
-    // Show loading state
-    setLoadingRoute(href);
-    
-    // Pre-load the route
-    router.prefetch(href);
-    
-    // Clear loading state after navigation
-    setTimeout(() => {
-      setLoadingRoute(null);
-    }, 1000);
-  }, [pathname, router]);
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);
@@ -125,18 +107,13 @@ export default function MainNavigation() {
                   href={item.href}
                   prefetch={true}
                   aria-label={`Navigate to ${item.label}`}
-                  onClick={() => handleNavigation(item.href)}
                   className={`group flex items-center space-x-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
                     pathname === item.href
                       ? 'bg-blue-50 text-blue-700 shadow-sm'
                       : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                  } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
+                  }`}
                 >
-                  {loadingRoute === item.href ? (
-                    <LoadingSpinner size="sm" color="blue" />
-                  ) : (
-                    <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>
-                  )}
+                  <span className="text-lg" role="img" aria-label={item.label}>{item.icon}</span>
                   <span>{item.label}</span>
                 </Link>
               ))}
@@ -184,18 +161,13 @@ export default function MainNavigation() {
               href={item.href}
               prefetch={true}
               aria-label={`Navigate to ${item.label}`}
-              onClick={() => handleNavigation(item.href)}
               className={`flex items-center space-x-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors ${
                 pathname === item.href
                   ? 'bg-blue-50 text-blue-700 border border-blue-200'
                   : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-              } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
+              }`}
             >
-              {loadingRoute === item.href ? (
-                <LoadingSpinner size="sm" color="blue" />
-              ) : (
-                <span className="text-xl" role="img" aria-label={item.label}>{item.icon}</span>
-              )}
+              <span className="text-xl" role="img" aria-label={item.label}>{item.icon}</span>
               <div className="flex-1">
                 <div className="font-medium">{item.label}</div>
                 <div className="text-xs text-gray-500">{item.description}</div>
@@ -226,18 +198,13 @@ export default function MainNavigation() {
                 href={item.href}
                 prefetch={true}
                 aria-label={`Navigate to ${item.label}`}
-                onClick={() => handleNavigation(item.href)}
                 className={`group flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${
                   pathname === item.href
                     ? 'bg-blue-50 text-blue-700 shadow-sm border border-blue-200'
                     : 'text-gray-600 hover:text-blue-600 hover:bg-gray-50'
-                } ${loadingRoute === item.href ? 'opacity-75' : ''}`}
+                }`}
               >
-                {loadingRoute === item.href ? (
-                  <LoadingSpinner size="sm" color="blue" />
-                ) : (
-                  <span className="text-xl" role="img" aria-label={item.label}>{item.icon}</span>
-                )}
+                <span className="text-xl" role="img" aria-label={item.label}>{item.icon}</span>
                 <div className="flex-1">
                   <div className="font-medium">{item.label}</div>
                   <div className="text-xs text-gray-500">{item.description}</div>

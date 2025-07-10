@@ -74,15 +74,15 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      // Using only available icons
+      { url: '/favicon.svg', type: 'image/svg+xml' },
     ],
     apple: [
-      // Apple touch icon removed
+      { url: '/android-chrome-192x192.svg', sizes: '192x192' },
     ],
     other: [
       {
         rel: 'mask-icon',
-        url: '/safari-pinned-tab.svg',
+        url: '/favicon.svg',
         color: '#2563eb',
       },
     ],
@@ -100,6 +100,7 @@ export const metadata: Metadata = {
   classification: 'Business Tools',
   referrer: 'origin-when-cross-origin',
   other: {
+    'mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
     'apple-mobile-web-app-title': 'Proofly',
