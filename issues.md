@@ -50,6 +50,7 @@
     - File upload input and handling functions (`handleCVUpload`)
     - Upload success notifications and related state variables
     - CV parsing imports and dependencies
+    - All "Upload your CV" text and references from UI and marketing content
     
     **Updated ATS Checker:**
     - Removed upload tab from navigation, now starts with "Job Description" tab
@@ -58,14 +59,22 @@
     - Preserved all ATS analysis functionality and scoring algorithms
     - Maintained enhanced ATS compatibility checking based on ResumeHelp recommendations
     
+    **Content Updates:**
+    - Updated main landing page (`src/app/page.tsx`) to reference "Build & analyse" instead of "Upload & analyse"
+    - Updated ATS standalone page (`src/app/ats/page.tsx`) with "Build Your CV" instead of "Upload Your CV"
+    - Changed step icons and descriptions to focus on CV building workflow
+    - Updated privacy page (`src/app/privacy/page.tsx`) to remove upload references
+    - Updated FAQ content to reflect CV builder-focused approach
+    
     **Benefits:**
     - Streamlined user experience focused on manual CV building
     - Eliminated parsing errors and extraction issues
     - Reduced complexity and potential points of failure
     - Maintained all ATS analysis and optimization features
     - Improved performance by removing file processing overhead
+    - Consistent messaging throughout the application
     
-    The application now focuses entirely on guided CV building with comprehensive ATS analysis, providing a more reliable and user-friendly experience.
+    The application now focuses entirely on guided CV building with comprehensive ATS analysis, providing a more reliable and user-friendly experience with no confusing upload references.
 
 15. Mobile space button not working on any form inputs
     **FIXED ✅** - Completely removed all input sanitization that was interfering with mobile keyboard input. Updated all input handling functions (`handlePersonalInfoChange`, `handleExperienceChange`, `updateAchievement`, `addSkill`) to use raw input values without any processing. Removed all sanitization imports and function calls from `CVForm.tsx`. All form inputs now work as plain text fields with full mobile keyboard support including space button, autocomplete, and special characters. This ensures a smooth typing experience on all devices and input methods.

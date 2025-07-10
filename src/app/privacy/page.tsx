@@ -38,7 +38,7 @@ export default function PrivacyPage() {
             <ul>
               <li style={{ color: 'black' }}><strong>CV Content:</strong> Your CV data (name, experience, education, etc.) is stored locally in your browser only</li>
               <li style={{ color: 'black' }}><strong>Personal Details:</strong> We don't require registration, so we don't collect names, emails, or phone numbers</li>
-              <li style={{ color: 'black' }}><strong>File Uploads:</strong> When you upload files for ATS analysis, they're processed in your browser and not stored on our servers</li>
+              <li style={{ color: 'black' }}><strong>CV Processing:</strong> All CV analysis is performed locally in your browser without sending data to our servers</li>
               <li style={{ color: 'black' }}><strong>User Accounts:</strong> We don't create user accounts or profiles</li>
             </ul>
 

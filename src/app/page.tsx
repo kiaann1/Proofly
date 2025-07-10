@@ -200,7 +200,7 @@ export default function Home() {
                   Ensure your CV passes through Applicant Tracking Systems with our advanced analysis engine and smart recommendations.
                 </p>
                 <ul className="space-y-2 sm:space-y-3">
-                  {['Upload & analyse existing CVs', 'Keyword optimisation', 'Format compatibility check', 'Actionable improvement tips'].map((feature, index) => (
+                  {['Build & analyse professional CVs', 'Keyword optimisation', 'Format compatibility check', 'Actionable improvement tips'].map((feature, index) => (
                     <li key={index} className="flex items-center text-xs sm:text-sm text-gray-600">
                       <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-purple-500 rounded-full mr-2 sm:mr-3"></div>
                       {feature}
@@ -371,7 +371,7 @@ export default function Home() {
                 </summary>
                 <div className="px-4 sm:px-6 pb-4 sm:pb-6">
                   <p className="text-sm sm:text-base text-gray-600 leading-relaxed">
-                    Our ATS checker analyses your CV against job descriptions to identify missing keywords, formatting issues, and optimisation opportunities. You can upload an existing CV or use our built-in checker while building your CV. It provides actionable suggestions to improve your chances of passing ATS screening.
+                    Our ATS checker analyses your CV against job descriptions to identify missing keywords, formatting issues, and optimisation opportunities. You can use our integrated CV builder with built-in ATS checking to create optimised CVs. It provides actionable suggestions to improve your chances of passing ATS screening.
                   </p>
                 </div>
               </details>
