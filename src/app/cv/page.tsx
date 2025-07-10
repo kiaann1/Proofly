@@ -7,6 +7,8 @@ import CVForm from '../../components/cv/CVForm';
 import CVPreview from '../../components/cv/CVPreview';
 import ATSChecker from '../../components/cv/ATSChecker';
 import ContentChecker from '../../components/cv/ContentChecker';
+import AISuggestions from '../../components/cv/AISuggestions';
+import ContextualAIAssistant from '../../components/cv/ContextualAIAssistant';
 import { cvStorage } from '../../lib/storage';
 import { exportToPDF, exportToPDFWithPageBreaks, exportToDOCX } from '../../lib/exportUtils';
 
@@ -48,6 +50,8 @@ export default function CVBuilderPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [isTabSwitching, setIsTabSwitching] = useState(false);
+  const [activeField, setActiveField] = useState<string>('');
+  const [activeFieldValue, setActiveFieldValue] = useState<string>('');
 
   // Load data on component mount
   useEffect(() => {
@@ -147,8 +151,115 @@ export default function CVBuilderPage() {
       alert('Failed to export DOCX. Please try again.');
     }
   };
+
   const handleStylingChange = (styling: CVStyling) => {
     setCvData(prev => ({ ...prev, styling }));
+  };
+
+  // AI Suggestion handler
+  const handleApplySuggestion = (suggestion: any) => {
+    switch (suggestion.type) {
+      case 'skill':
+        if (!cvData.skills.includes(suggestion.value)) {
+          setCvData(prev => ({
+            ...prev,
+            skills: [...prev.skills, suggestion.value]
+          }));
+        }
+        break;
+      
+      case 'improvement':
+        if (suggestion.field === 'summary') {
+          setCvData(prev => ({
+            ...prev,
+            personalInfo: {
+              ...prev.personalInfo,
+              summary: suggestion.value
+            }
+          }));
+        } else if (suggestion.field === 'experience' && suggestion.index !== undefined) {
+          const newExperience = [...cvData.experience];
+          if (newExperience[suggestion.index]) {
+            newExperience[suggestion.index] = {
+              ...newExperience[suggestion.index],
+              description: suggestion.value
+            };
+            setCvData(prev => ({ ...prev, experience: newExperience }));
+          }
+        }
+        break;
+      
+      case 'keyword':
+        // Add keyword to summary or experience
+        if (cvData.personalInfo.summary) {
+          setCvData(prev => ({
+            ...prev,
+            personalInfo: {
+              ...prev.personalInfo,
+              summary: prev.personalInfo.summary + ` ${suggestion.value}.`
+            }
+          }));
+        }
+        break;
+    }
+  };
+
+  // Field focus handlers for contextual AI
+  const handleFieldFocus = (field: string, value: string) => {
+    setActiveField(field);
+    setActiveFieldValue(value);
+  };
+
+  const handleFieldBlur = () => {
+    // Keep field active for longer to allow AI suggestions to show
+    // Don't clear immediately if user is interacting with AI assistant
+    setTimeout(() => {
+      // Only clear if we're not hovering over the AI assistant
+      const aiAssistant = document.querySelector('[data-ai-assistant]');
+      if (!aiAssistant?.matches(':hover')) {
+        setActiveField('');
+        setActiveFieldValue('');
+      }
+    }, 500); // Increased delay
+  };
+
+  // Contextual AI suggestion handler
+  const handleApplyContextualSuggestion = (field: string, value: string) => {
+    switch (field) {
+      case 'summary':
+        setCvData(prev => ({
+          ...prev,
+          personalInfo: {
+            ...prev.personalInfo,
+            summary: value
+          }
+        }));
+        break;
+      
+      case 'experience-description':
+        // Find the active experience and update it
+        const activeExpIndex = cvData.experience.findIndex(exp => exp.description === activeFieldValue);
+        if (activeExpIndex >= 0) {
+          const newExperience = [...cvData.experience];
+          newExperience[activeExpIndex] = {
+            ...newExperience[activeExpIndex],
+            description: value
+          };
+          setCvData(prev => ({ ...prev, experience: newExperience }));
+        }
+        break;
+      
+      case 'skills':
+        const newSkills = value.split(', ');
+        setCvData(prev => ({
+          ...prev,
+          skills: [...new Set([...prev.skills, ...newSkills])]
+        }));
+        break;
+    }
+    
+    // Update the active field value
+    setActiveFieldValue(value);
   };
 
   if (isLoading) {
@@ -165,7 +276,7 @@ export default function CVBuilderPage() {
   return (
     <AppLayout fullWidth>
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="max-w-7md mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
           {/* Modern Header with Glass Effect */}
           <div className="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-gray-200/50 p-4 sm:p-6 lg:p-8 mb-6 sm:mb-8">
             <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 sm:gap-6">
@@ -178,10 +289,10 @@ export default function CVBuilderPage() {
                   </div>
                   <div>
                     <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                      CV Builder
+                      AI-Powered CV Builder
                     </h1>
                     <p className="text-gray-600 text-sm sm:text-base lg:text-lg">
-                      Create a professional CV with live preview and ATS optimisation
+                      Create a professional CV with AI suggestions, live preview and ATS optimisation
                     </p>
                   </div>
                 </div>
@@ -197,6 +308,12 @@ export default function CVBuilderPage() {
                       <span className="text-xs sm:text-sm font-medium">Saving...</span>
                     </div>
                   )}
+                  
+                  {/* AI Active Indicator */}
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 rounded-lg border border-purple-200">
+                    <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                    <span className="text-xs sm:text-sm font-medium">🤖 AI Assistant Active</span>
+                  </div>
                 </div>
               </div>
 
@@ -278,18 +395,50 @@ export default function CVBuilderPage() {
             <div className={`transition-all duration-300 ${isTabSwitching ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'}`}>
               {activeTab === 'form' && (
                 <div className="p-4 sm:p-6 lg:p-8">
-                  <CVForm cvData={cvData} onChange={handleCVDataChange} onDataRefresh={refreshCVData} />
+                  <CVForm 
+                    cvData={cvData} 
+                    onChange={handleCVDataChange} 
+                    onDataRefresh={refreshCVData}
+                    onFieldFocus={handleFieldFocus}
+                    onFieldBlur={handleFieldBlur}
+                  />
                 </div>
               )}
               
               {activeTab === 'preview' && (
                 <div className="p-4 sm:p-6 lg:p-8 bg-gray-50/50">
+                  {/* AI Preview Suggestions */}
+                  <div className="mb-6 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">🤖</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">AI Preview Insights</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Preview your CV and see how it looks to employers. The AI will analyze formatting and visual impact.
+                    </p>
+                  </div>
+                  
                   <CVPreview cvData={cvData} onTemplateChange={handleTemplateChange} onStylingChange={handleStylingChange} />
                 </div>
               )}
                 
               {activeTab === 'ats' && (
                 <div className="p-4 sm:p-6 lg:p-8">
+                  {/* AI ATS Suggestions */}
+                  <div className="mb-6 bg-gradient-to-r from-green-50 to-blue-50 border border-green-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 bg-gradient-to-r from-green-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">🎯</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">AI ATS Optimization</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      Get AI-powered insights to optimize your CV for Applicant Tracking Systems and improve your chances of getting noticed.
+                    </p>
+                  </div>
+                  
                   <ATSChecker 
                     cvData={cvData} 
                     onChange={handleCVDataChange} 
@@ -300,6 +449,19 @@ export default function CVBuilderPage() {
 
               {activeTab === 'content' && (
                 <div className="p-4 sm:p-6 lg:p-8">
+                  {/* AI Content Suggestions */}
+                  <div className="mb-6 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-6 h-6 bg-gradient-to-r from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                        <span className="text-white text-xs">📝</span>
+                      </div>
+                      <h3 className="font-semibold text-gray-900">AI Content Analysis</h3>
+                    </div>
+                    <p className="text-sm text-gray-600">
+                      AI-powered grammar checking, style improvements, and content suggestions to make your CV more professional.
+                    </p>
+                  </div>
+                  
                   <ContentChecker cvData={cvData} />
                 </div>
               )}
@@ -307,6 +469,16 @@ export default function CVBuilderPage() {
           </div>
         </div>
       </div>
+
+      {/* AI Suggestions Assistant */}
+      <AISuggestions 
+        cvData={cvData} 
+        activeTab={activeTab} 
+        activeField={activeField}
+        fieldValue={activeFieldValue}
+        onApplySuggestion={handleApplySuggestion}
+        onApplyContextualSuggestion={handleApplyContextualSuggestion}
+      />
     </AppLayout>
   );
 }

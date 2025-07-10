@@ -2,30 +2,29 @@ import { Metadata } from 'next';
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: 'Free Professional CV Builder - Create ATS-optimised Resumes | Proofly',
-  description: 'Build professional CVs that get you hired faster. Free ATS-optimised resume builder with templates, cover letter generator, and career advice. No registration required.',
+  title: 'AI-Powered CV Builder & ATS Checker | Proofly',
+  description: 'Create professional CVs with AI suggestions and check how well they pass ATS systems. Get real-time feedback to land more interviews.',
   keywords: [
-    'free CV builder', 'professional resume builder', 'ATS optimised CV', 'resume templates',
-    'cover letter generator', 'free resume maker', 'job application tools', 'career advice',
-    'professional CV templates', 'ATS friendly resume', 'online CV builder', 'resume creator'
+    'AI CV builder', 'ATS checker', 'resume scanner', 'CV optimizer', 'job application',
+    'ATS optimized CV', 'resume builder', 'CV feedback', 'interview preparation'
   ],
   openGraph: {
-    title: 'Free Professional CV Builder - Create ATS-optimised Resumes | Proofly',
-    description: 'Build professional CVs that get you hired faster. Free ATS-optimised resume builder with templates, cover letter generator, and career advice. No registration required.',
+    title: 'AI-Powered CV Builder & ATS Checker | Proofly',
+    description: 'Create professional CVs with AI suggestions and check how well they pass ATS systems.',
     url: 'https://proofly.com',
     images: [
       {
         url: '/og-home.png',
         width: 1200,
         height: 630,
-        alt: 'Proofly - Free Professional CV Builder',
+        alt: 'Proofly - AI-Powered Career Intelligence Platform',
       },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Free Professional CV Builder - Create ATS-optimised Resumes | Proofly',
-    description: 'Build professional CVs that get you hired faster. Free ATS-optimised resume builder with templates, cover letter generator, and career advice. No registration required.',
+    title: 'AI-Powered Career Intelligence Platform - CV Builder & Analytics | Proofly',
+    description: 'Transform your career with AI-powered insights. Professional CV builder, market intelligence, salary benchmarking, and personalised career recommendations. Get hired faster.',
     images: ['/og-home.png'],
   },
   alternates: {
@@ -35,116 +34,257 @@ export const metadata: Metadata = {
 
 export default function Home() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-white">
       {/* Hero Section */}
-      <section className="relative overflow-hidden">        
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-20 lg:pt-24 pb-16 sm:pb-20 lg:pb-28">
-          <div className="text-center">            
+      <section className="relative bg-gradient-to-br from-blue-50 to-indigo-100 overflow-hidden">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-16 sm:pt-24 sm:pb-20">
+          <div className="text-center">
             {/* Badge */}
-            <div className="flex flex-col sm:flex-row justify-center items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
-              <div className="inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-blue-100 text-blue-800 text-xs sm:text-sm font-medium">
-                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414z" clipRule="evenodd" />
-                </svg>
-                #1 ATS-Optimised CV Builder
-              </div>
-              <div className="inline-flex items-center px-3 sm:px-4 py-2 rounded-full bg-green-100 text-green-800 text-xs sm:text-sm font-bold border-2 border-green-200">
-                <svg className="w-3 h-3 sm:w-4 sm:h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414z" clipRule="evenodd" />
-                </svg>
-                100% FREE FOREVER
-              </div>
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-blue-100 text-blue-800 text-sm font-medium mb-8">
+              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414z" clipRule="evenodd" />
+              </svg>
+              AI-Powered CV Builder & ATS Checker
             </div>
 
             {/* Main Headline */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-4 sm:mb-6 px-2">
-              Build CVs that get you
-              <span className="block bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                hired faster
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
+              Build CVs that get you{' '}
+              <span className="bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                interviews
               </span>
-            </h1>            
+            </h1>
             
             {/* Subheadline */}
-            <p className="text-lg sm:text-xl lg:text-2xl text-gray-600 max-w-3xl mx-auto mb-6 sm:mb-8 leading-relaxed px-4">
-              Create professional, ATS-optimised CVs in minutes. Our intelligent platform analyses your CV against job requirements and optimises it for success.
+            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-8 leading-relaxed">
+              Create professional CVs with AI suggestions, then check how well they pass ATS systems. 
+              Get real-time feedback to land more interviews.
             </p>
             
-            {/* Free Features Highlight */}
-            <div className="bg-white/80 backdrop-blur rounded-2xl p-4 sm:p-6 max-w-2xl mx-auto mb-8 sm:mb-12 border border-gray-200 shadow-lg mx-4">
-              <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">🎉 Everything is 100% Free - No Hidden Costs!</h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-sm text-gray-700">
-                <div className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Unlimited CV builds
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  All professional templates
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  ATS analysis & tips
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  PDF & DOCX exports
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-4 h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  Cover letter generator
-                </div>
-                <div className="flex items-center">
-                  <svg className="w-3 h-3 sm:w-4 sm:h-4 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                  No account required
-                </div>
-              </div>
-            </div>            
-            
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center mb-12 sm:mb-16 px-4">
-              <Link 
-                href="/cv" 
-                className="group inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-blue-600 hover:bg-blue-700 text-white text-base sm:text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+              <Link
+                href="/cv"
+                className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors shadow-lg hover:shadow-xl"
               >
-                Start Building CV for Free
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                </svg>
+                Start Building Your CV
               </Link>
-              <Link 
-                href="/cover-letter" 
-                className="group inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-green-600 hover:bg-green-700 text-white text-base sm:text-lg font-semibold rounded-2xl transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105"
+              <Link
+                href="/ats"
+                className="px-8 py-4 bg-white text-blue-600 border-2 border-blue-600 rounded-lg font-semibold text-lg hover:bg-blue-50 transition-colors"
               >
-                Create Cover Letter
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-              </Link>
-              <Link 
-                href="/ats" 
-                className="group inline-flex items-center justify-center px-6 sm:px-8 py-3 sm:py-4 bg-white text-gray-900 text-base sm:text-lg font-semibold rounded-2xl hover:bg-gray-50 transition-all duration-300 shadow-lg border border-gray-200 hover:border-gray-300"
-              >
-                Analyse Existing CV
-                <svg className="w-4 h-4 sm:w-5 sm:h-5 ml-2 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
+                Check Existing CV
               </Link>
             </div>
 
-            {/* Social Proof */}
+            {/* Trust Indicators */}
+            <div className="flex flex-wrap justify-center items-center gap-6 text-sm text-gray-600">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414z" clipRule="evenodd" />
+                </svg>
+                100% Free Forever
+              </div>
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414z" clipRule="evenodd" />
+                </svg>
+                AI-Powered Suggestions
+              </div>
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.293l-3-3a1 1 0 00-1.414-1.414L9 5.586 7.707 4.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4a1 1 0 00-1.414-1.414z" clipRule="evenodd" />
+                </svg>
+                ATS Optimized
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
+      {/* How It Works Section */}
+      <section className="py-16 bg-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              How Proofly Works
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Three simple steps to create a CV that gets you interviews
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {/* Step 1 */}
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-blue-600">1</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Build Your CV</h3>
+              <p className="text-gray-600 mb-4">
+                Use our intuitive CV builder with AI-powered suggestions for each field. 
+                Get real-time tips to make your CV stand out.
+              </p>
+              <div className="bg-blue-50 rounded-lg p-3 text-sm text-blue-800">
+                🤖 AI suggests better ways to phrase your experience
+              </div>
+            </div>
+
+            {/* Step 2 */}
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-purple-600">2</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Add Job Description</h3>
+              <p className="text-gray-600 mb-4">
+                Paste a job description or select from popular roles. 
+                We'll analyze what employers are looking for.
+              </p>
+              <div className="bg-purple-50 rounded-lg p-3 text-sm text-purple-800">
+                📋 Match your CV to specific job requirements
+              </div>
+            </div>
+
+            {/* Step 3 */}
+            <div className="text-center p-6">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-2xl font-bold text-green-600">3</span>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Get ATS Score</h3>
+              <p className="text-gray-600 mb-4">
+                Our AI analyzes your CV against the job requirements and gives you 
+                a detailed ATS compatibility score with actionable feedback.
+              </p>
+              <div className="bg-green-50 rounded-lg p-3 text-sm text-green-800">
+                ⚡ Instant feedback and improvement suggestions
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Features Section */}
+      <section className="py-16 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+              Why Choose Proofly?
+            </h2>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+              Built with AI to help you create CVs that actually get you hired
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {/* Feature 1 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">AI Writing Suggestions</h3>
+              <p className="text-gray-600">
+                Get intelligent suggestions for every section of your CV. Our AI helps you 
+                write compelling descriptions that highlight your achievements.
+              </p>
+            </div>
+
+            {/* Feature 2 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Advanced ATS Checking</h3>
+              <p className="text-gray-600">
+                Our AI-powered ATS checker analyzes your CV against job descriptions, 
+                giving you detailed scores and specific improvement recommendations.
+              </p>
+            </div>
+
+            {/* Feature 3 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Real-time Feedback</h3>
+              <p className="text-gray-600">
+                Get instant feedback as you build your CV. See your ATS score update 
+                in real-time and know exactly what to improve.
+              </p>
+            </div>
+
+            {/* Feature 4 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.746 0 3.332.477 4.5 1.253v13C20.832 18.477 19.246 18 17.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Job Tracking</h3>
+              <p className="text-gray-600">
+                Track your job applications, get insights on how to prepare for interviews, 
+                and manage your entire job search process.
+              </p>
+            </div>
+
+            {/* Feature 5 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zM7 3H5a2 2 0 00-2 2v12a4 4 0 004 4h2a2 2 0 002-2V5a2 2 0 00-2-2H7zM9 3v18" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">Cover Letter Generator</h3>
+              <p className="text-gray-600">
+                Generate personalized cover letters that complement your CV and 
+                are tailored to specific job applications.
+              </p>
+            </div>
+
+            {/* Feature 6 */}
+            <div className="bg-white rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow">
+              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-3">100% Free & Secure</h3>
+              <p className="text-gray-600">
+                All features are completely free forever. Your data is secure and 
+                we never share your personal information.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Section */}
+      <section className="py-16 bg-gradient-to-r from-blue-600 to-purple-600">
+        <div className="max-w-4xl mx-auto text-center px-4 sm:px-6 lg:px-8">
+          <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+            Ready to Get More Interviews?
+          </h2>
+          <p className="text-xl text-blue-100 mb-8">
+            Join thousands of job seekers who've improved their CVs with Proofly
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              href="/cv"
+              className="px-8 py-4 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-colors shadow-lg"
+            >
+              Start Building Your CV
+            </Link>
+            <Link
+              href="/ats"
+              className="px-8 py-4 bg-transparent text-white border-2 border-white rounded-lg font-semibold text-lg hover:bg-white hover:text-blue-600 transition-colors"
+            >
+              Check Your Current CV
+            </Link>
           </div>
         </div>
       </section>

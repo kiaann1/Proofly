@@ -6,15 +6,18 @@
 import { useState } from 'react';
 import { CVData, PersonalInfo, Experience } from '../../types';
 import CVClearActions from './CVClearActions';
+import AITooltip from './AITooltip';
 import { cvStorage } from '../../lib/storage';
 
 interface CVFormProps {
   cvData: CVData;
   onChange: (data: Partial<CVData>) => void;
   onDataRefresh?: () => void;
+  onFieldFocus?: (field: string, value: string) => void;
+  onFieldBlur?: () => void;
 }
 
-export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps) {
+export default function CVForm({ cvData, onChange, onDataRefresh, onFieldFocus, onFieldBlur }: CVFormProps) {
   const [activeSection, setActiveSection] = useState<string>('personal');
   const [newSkill, setNewSkill] = useState('');
   const [showDebug, setShowDebug] = useState(false);
@@ -332,12 +335,21 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700   mb-2">
-          Professional Summary
-        </label>
+        <div className="flex items-center gap-3 mb-2">
+          <label className="block text-sm font-medium text-gray-700">
+            Professional Summary
+          </label>
+          <AITooltip fieldType="summary" cvData={cvData}>
+            <div className="w-4 h-4 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs cursor-help hover:bg-blue-200 transition-colors">
+              🤖
+            </div>
+          </AITooltip>
+        </div>
         <textarea
           value={cvData.personalInfo.summary}
           onChange={(e) => handlePersonalInfoChange('summary', e.target.value)}
+          onFocus={() => onFieldFocus?.('summary', cvData.personalInfo.summary)}
+          onBlur={() => onFieldBlur?.()}
           rows={4}
           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 transition-colors bg-white text-gray-900 placeholder-gray-500"
           placeholder="A brief professional summary highlighting your key skills and experience..."
@@ -376,7 +388,14 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   const renderExperience = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <h2 className="text-xl font-semibold text-gray-900">Work Experience</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-900">Work Experience</h2>
+          <AITooltip fieldType="experience" cvData={cvData}>
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs cursor-help hover:bg-blue-200 transition-colors">
+              🤖
+            </div>
+          </AITooltip>
+        </div>
         <button
           onClick={addExperience}
           className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
@@ -504,6 +523,8 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
                 <textarea
                   value={exp.description}
                   onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
+                  onFocus={() => onFieldFocus?.('experience-description', exp.description)}
+                  onBlur={() => onFieldBlur?.()}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300  rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900  bg-white   placeholder-gray-500 "
                   placeholder="Brief description of your role and responsibilities..."
@@ -572,7 +593,14 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
 
     return (
       <div className="space-y-6">
-        <h2 className="text-xl font-semibold text-gray-900 ">Skills</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-900">Skills</h2>
+          <AITooltip fieldType="skills" cvData={cvData}>
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs cursor-help hover:bg-blue-200 transition-colors">
+              🤖
+            </div>
+          </AITooltip>
+        </div>
         
         <div className="flex flex-col sm:flex-row gap-2">
           <input
@@ -580,6 +608,8 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
             value={newSkill}
             onChange={(e) => setNewSkill(e.target.value)}
             onKeyPress={handleKeyPress}
+            onFocus={() => onFieldFocus?.('skills', cvData.skills.join(', '))}
+            onBlur={() => onFieldBlur?.()}
             className="flex-1 px-3 py-2 border border-gray-300  rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900  bg-white   placeholder-gray-500 "
             placeholder="Add a skill (e.g., JavaScript, Project Management)"
           />
@@ -635,7 +665,14 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   const renderEducation = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold text-gray-900 ">Education</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-900">Education</h2>
+          <AITooltip fieldType="education" cvData={cvData}>
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs cursor-help hover:bg-blue-200 transition-colors">
+              🤖
+            </div>
+          </AITooltip>
+        </div>
         <button
           onClick={addEducation}
           className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -746,6 +783,8 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
                 <textarea
                   value={edu.description}
                   onChange={(e) => handleEducationChange(index, 'description', e.target.value)}
+                  onFocus={() => onFieldFocus?.('education-description', edu.description)}
+                  onBlur={() => onFieldBlur?.()}
                   rows={3}
                   className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300  rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900  bg-white   placeholder-gray-500 "
                   placeholder="Relevant coursework, honors, extracurricular activities..."
@@ -768,7 +807,14 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   const renderCertifications = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold text-gray-900 ">Certifications</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-900">Certifications</h2>
+          <AITooltip fieldType="certifications" cvData={cvData}>
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs cursor-help hover:bg-blue-200 transition-colors">
+              🤖
+            </div>
+          </AITooltip>
+        </div>
         <button
           onClick={addCertification}
           className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
@@ -867,7 +913,14 @@ export default function CVForm({ cvData, onChange, onDataRefresh }: CVFormProps)
   const renderLanguages = () => (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <h2 className="text-xl font-semibold text-gray-900 ">Languages</h2>
+        <div className="flex items-center gap-3">
+          <h2 className="text-xl font-semibold text-gray-900">Languages</h2>
+          <AITooltip fieldType="languages" cvData={cvData}>
+            <div className="w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs cursor-help hover:bg-blue-200 transition-colors">
+              🤖
+            </div>
+          </AITooltip>
+        </div>
         <button
           onClick={addLanguage}
           className="w-full sm:w-auto inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"

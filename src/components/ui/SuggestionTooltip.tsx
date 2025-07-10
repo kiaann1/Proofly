@@ -16,7 +16,7 @@ export default function SuggestionTooltip({ whyImportant, howToImplement, childr
     return <>{children}</>;
   }
 
-  const tooltipId = id || `tooltip-${Math.random().toString(36).substr(2, 9)}`;
+  const tooltipId = id || `tooltip-${Date.now()}-${Math.floor(performance.now())}`;
 
   return (
     <>

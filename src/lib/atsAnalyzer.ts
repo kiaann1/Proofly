@@ -797,7 +797,7 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
       
       // Realistic scoring - very few CVs should score above 85%
       if (overallScore > 85) {
-        overallScore = Math.min(85, overallScore - Math.floor(Math.random() * 8));
+        overallScore = Math.min(85, overallScore - 5); // Apply a consistent penalty, not random
       }
       
       // Ensure minimum realistic floor but keep it low for poor CVs
@@ -931,7 +931,7 @@ function analyzeKeywords(cvData: CVData, jobDescription: JobDescription): Keywor
   
   // Apply realistic penalties
   if (matchPercentage > 85) {
-    matchPercentage = 85 - Math.floor(Math.random() * 10); // Random reduction for realism
+    matchPercentage = 82; // Apply consistent cap, not random
   }
   
   // Penalty for too many missing critical keywords

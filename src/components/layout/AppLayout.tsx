@@ -18,13 +18,11 @@ export default function AppLayout({ children, className = '', fullWidth = false 
     <div className="min-h-screen bg-gray-50">
       {/* Main content with responsive padding that accounts for navigation */}
       <div className={`
-        pt-16 lg:pt-20 
         ${fullWidth ? '' : 'max-w-7xl mx-auto'}
         ${className}
       `}>
         <main className={`
           ${fullWidth ? '' : 'px-4 sm:px-6 lg:px-8'}
-          py-6 sm:py-8 lg:py-12
         `}>
           {children}
         </main>

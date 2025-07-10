@@ -14,9 +14,9 @@ export default function MainNavigation() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   const navItems = useMemo(() => [
-    { href: '/', label: 'Dashboard', icon: '🏠', description: 'Home and overview' },
     { href: '/cv', label: 'CV Builder', icon: '📄', description: 'Create and edit your CV' },
     { href: '/ats', label: 'ATS Checker', icon: '🎯', description: 'Check ATS compatibility' },
+    { href: '/career-dashboard', label: 'Career Dashboard', icon: '�', description: 'AI-powered career insights' },
     { href: '/cover-letter', label: 'Cover Letter', icon: '💼', description: 'Generate cover letters' },
     { href: '/blog', label: 'Career Tips', icon: '📝', description: 'Expert career advice' },
   ], []);
@@ -117,25 +117,6 @@ export default function MainNavigation() {
                   <span>{item.label}</span>
                 </Link>
               ))}
-            </div>
-
-            {/* Right Side Actions */}
-            <div className="flex items-center space-x-3">
-              {/* Get Started Button */}
-              {pathname === '/' && (
-                <Link
-                  href="/cv"
-                  prefetch={true}
-                  aria-label="Get Started with CV Builder"
-                  className="inline-flex items-center px-3 py-2 lg:px-4 lg:py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg lg:rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-                >
-                  <span className="hidden sm:inline">Get Started</span>
-                  <span className="sm:hidden">Start</span>
-                  <svg className="w-4 h-4 ml-1 sm:ml-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </Link>
-              )}
             </div>
           </div>
         </div>
