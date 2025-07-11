@@ -1,4 +1,16 @@
-import { CVData, ATSSuggestion, JobDescription } from '../types';
+import {
+  CVData,
+  Experience,
+  Education,
+  Certification,
+  ATSAnalysis,
+  KeywordAnalysis,
+  FormatAnalysis,
+  ContentAnalysis,
+  JobDescription,
+  ATSSuggestion
+} from '../types';
+import { getSmolLMSuggestion } from './smollm';
 import { getLLMRecommendations } from './llmAiAnalyzer';
 import { getLLMContentSuggestions } from './llmContentChecker';
 
@@ -184,8 +196,10 @@ function calculateContentCompletenessScore(cvData: CVData): number {
   // Work experience completeness (40 points)
   if (cvData.experience && cvData.experience.length > 0) {
     score += 15;
-    const avgExpLength = cvData.experience.reduce((acc: number, exp: Experience) => 
-      acc + (exp.description?.length || 0), 0) / cvData.experience.length;
+    // Calculate average experience description length
+    const avgExpLength = cvData.experience.reduce((acc: number, exp: Experience) => {
+      return acc + (exp.description ? exp.description.length : 0);
+    }, 0) / (cvData.experience.length || 1);
     if (avgExpLength > 100) score += 15;
     
     const hasAchievements = cvData.experience.some((exp: Experience) => 
@@ -304,7 +318,7 @@ function extractJobKeywords(jobDescription: string): string[] {
     if (skill.length > 2 && skill.length < 30) {
       keywords.add(skill);
     }
-  }
+  });
   
   return Array.from(keywords);
 }
@@ -804,21 +818,21 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
       
       // Ensure minimum realistic floor but keep it low for poor CVs
       overallScore = Math.max(15, overallScore);
-      
       // Generate suggestions based on analysis including new ATS format issues
-      const suggestions = await generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData, atsFormatIssues, enhancedKeywordMatch);
-      
-      // Create overall feedback
-      const overallFeedback = generateOverallFeedback(overallScore, keywordAnalysis, formatAnalysis, contentAnalysis);
-      
-      resolve({
-        score: overallScore,
-        overallFeedback,
-        keywordMatch: keywordAnalysis,
-        formatAnalysis,
-        contentAnalysis,
-        suggestions,
-      });
+      // FIX: Make setTimeout callback async to allow await
+      setTimeout(async () => {
+        const suggestions = await generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData, atsFormatIssues, enhancedKeywordMatch);
+        // Create overall feedback
+        const overallFeedback = generateOverallFeedback(overallScore, keywordAnalysis, formatAnalysis, contentAnalysis);
+        resolve({
+          score: overallScore,
+          overallFeedback,
+          keywordMatch: keywordAnalysis,
+          formatAnalysis,
+          contentAnalysis,
+          suggestions,
+        });
+      }, 0);
     }, 0); // Use 0ms timeout to yield control immediately
   });
 }
@@ -1132,7 +1146,7 @@ export async function generateSuggestions(
     // Map to ATSSuggestion[]
     return suggestions.map((s: any, idx: number) => ({
       id: `llm-${idx}`,
-      type: 'content', // Use allowed type
+      type: 'guidance', // changed from 'improvement' to allowed type
       priority: 'high',
       title: s.title,
       description: s.description,
@@ -1234,7 +1248,27 @@ export async function getAtsAnalysisLLM(cvData: CVData): Promise<ATSAnalysis> {
   const cvText = JSON.stringify(cvData);
   const analysis = await getLLMContentSuggestions({}, cvText);
   return {
-    contentAnalysis: {}, // LLM should provide this structure
+    score: 0, // placeholder, update with real score if available
+    overallFeedback: '', // placeholder, update with real feedback if available
+    keywordMatch: {
+      matchedKeywords: [],
+      missingKeywords: [],
+      keywordDensity: {},
+      score: 0
+    },
+    formatAnalysis: {
+      hasProblematicElements: false,
+      problematicElements: [],
+      hasGoodStructure: false,
+      score: 0
+    },
+    contentAnalysis: {
+      hasMeasurableResults: false,
+      hasActionVerbs: false,
+      sectionCompleteness: {},
+      wordCount: 0,
+      score: 0
+    },
     suggestions: analysis.map((s: string, i: number) => ({
       id: `llm-${i}`,
       type: 'guidance',

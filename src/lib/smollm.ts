@@ -22,8 +22,12 @@ export async function getSmolLMSuggestion(prompt: string): Promise<string> {
     const result = response.data[0]?.generated_text || response.data.generated_text || '';
     logLLMUsage(prompt, result);
     return result;
-  } catch (error) {
+  } catch (error: any) {
     logLLMUsage(prompt, '', error);
+    // Enhanced error handling for network errors
+    if (error.isAxiosError && !error.response) {
+      throw new Error('Network error: Unable to reach the AI service. Please check your internet connection or try again later.');
+    }
     throw error;
   }
 }

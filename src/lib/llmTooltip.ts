@@ -1,4 +1,4 @@
-import { getSmolLMSuggestion } from '../../lib/smollm';
+import { getSmolLMSuggestion } from './smollm';
 
 // Simple in-memory cache for LLM responses
 const llmCache = new Map<string, any>();
