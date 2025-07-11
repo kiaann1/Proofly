@@ -27,8 +27,10 @@ export default function LoadingSpinner({
   };
 
   return (
-    <div className="flex items-center justify-center space-x-2">
-      <div className={`animate-spin ${sizeClasses[size]}`}>
+    <div className="flex items-center justify-center space-x-2" role="status" aria-busy="true">
+      <div className={`animate-spin ${sizeClasses[size]}`}
+        aria-label="Loading"
+      >
         <svg 
           className={`${sizeClasses[size]} ${colorClasses[color]}`} 
           fill="none" 

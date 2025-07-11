@@ -2,6 +2,18 @@
 
 Proofly is a modern SaaS platform for logging work, compiling achievements, and building ATS-optimised CVs—ideal for freelancers, creatives, and professionals who need proof-of-work and career documentation.
 
+---
+
+## 🔒 AI, Privacy, and Accessibility
+
+- **LLM-Driven Suggestions**: All suggestions, tips, and recommendations in the CV builder are generated in real time by a large language model (LLM) via the Hugging Face API. No static, rule-based, or template advice is shown to users.
+- **User Feedback**: Users can rate AI suggestions (thumbs up/down) to help improve the experience.
+- **Privacy**: All CV data sent to the LLM is anonymized (personal details removed) and processed securely. A privacy notice is shown in the UI wherever AI is used. See [/privacy](./src/app/privacy/page.tsx) for details.
+- **Customization**: Users can set preferences for the tone (e.g., professional, friendly) and language of AI suggestions.
+- **Accessibility**: All interactive and AI-driven components include ARIA roles, labels, and keyboard navigation for accessibility.
+
+---
+
 ## ✨ Features
 
 ### 🎯 Core Functionality
