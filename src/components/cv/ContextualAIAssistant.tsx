@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CVData } from '../../types';
 
 interface ContextualAIAssistantProps {
@@ -34,6 +34,9 @@ export default function ContextualAIAssistant({
   const [suggestions, setSuggestions] = useState<ContextualSuggestion[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isVisible, setIsVisible] = useState(true);
+  
+  // Track if user has explicitly closed the assistant
+  const hasBeenExplicitlyClosed = useRef(false);
 
   // Generate contextual suggestions based on current field and content
   const generateContextualSuggestions = async (): Promise<ContextualSuggestion[]> => {
@@ -222,7 +225,7 @@ export default function ContextualAIAssistant({
             id: 'edu-expand',
             type: 'enhance',
             title: 'Add relevant coursework and achievements',
-            suggestion: `${fieldValue.trim()} Relevant coursework: ${getRelevantCoursework(cvData.skills)} | GPA: 3.7/4.0 | Honors: Dean's List, Academic Excellence Award`,
+            suggestion: `${fieldValue.trim()} Relevant coursework: ${getRelevantCoursework(cvData.skills, fieldValue)} | GPA: 3.7/4.0 | Honors: Dean's List, Academic Excellence Award`,
             reasoning: 'Relevant coursework and academic achievements strengthen your education section and show specialized knowledge',
             confidence: 80
           });
@@ -292,9 +295,78 @@ export default function ContextualAIAssistant({
     );
   };
 
-  const getRelevantCoursework = (skills: string[]): string => {
-    const coursework = ['Data Structures', 'Algorithms', 'Software Engineering', 'Database Systems', 'Machine Learning'];
-    return coursework.slice(0, 3).join(', ');
+  const getRelevantCoursework = (skills: string[], educationText: string = ''): string => {
+    const lowerEducation = educationText.toLowerCase();
+    
+    // Business/Management/Economics
+    if (lowerEducation.includes('business') || lowerEducation.includes('management') || 
+        lowerEducation.includes('economics') || lowerEducation.includes('finance') ||
+        lowerEducation.includes('accounting') || lowerEducation.includes('marketing')) {
+      const coursework = ['Strategic Management', 'Financial Analysis', 'Marketing Research', 'Operations Management', 'Business Ethics'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Psychology/Social Sciences
+    if (lowerEducation.includes('psychology') || lowerEducation.includes('social') ||
+        lowerEducation.includes('sociology') || lowerEducation.includes('anthropology')) {
+      const coursework = ['Research Methods', 'Statistical Analysis', 'Cognitive Psychology', 'Social Theory', 'Behavioral Studies'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Engineering (non-software)
+    if (lowerEducation.includes('engineering') && !lowerEducation.includes('software') && !lowerEducation.includes('computer')) {
+      const coursework = ['Engineering Mathematics', 'Thermodynamics', 'Materials Science', 'Systems Design', 'Project Management'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Medicine/Health Sciences
+    if (lowerEducation.includes('medicine') || lowerEducation.includes('health') ||
+        lowerEducation.includes('nursing') || lowerEducation.includes('biology') ||
+        lowerEducation.includes('biomedical')) {
+      const coursework = ['Anatomy & Physiology', 'Pharmacology', 'Medical Ethics', 'Research Methods', 'Clinical Practice'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Education/Teaching
+    if (lowerEducation.includes('education') || lowerEducation.includes('teaching') ||
+        lowerEducation.includes('pedagogy')) {
+      const coursework = ['Educational Psychology', 'Curriculum Development', 'Assessment Methods', 'Classroom Management', 'Learning Theory'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Arts/Design/Creative
+    if (lowerEducation.includes('art') || lowerEducation.includes('design') ||
+        lowerEducation.includes('creative') || lowerEducation.includes('media') ||
+        lowerEducation.includes('graphic')) {
+      const coursework = ['Design Theory', 'Visual Communication', 'Art History', 'Digital Media', 'Creative Process'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Law/Legal Studies
+    if (lowerEducation.includes('law') || lowerEducation.includes('legal') ||
+        lowerEducation.includes('jurisprudence')) {
+      const coursework = ['Constitutional Law', 'Contract Law', 'Legal Research', 'Ethics in Law', 'Civil Procedure'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Communications/Journalism/English
+    if (lowerEducation.includes('communication') || lowerEducation.includes('journalism') ||
+        lowerEducation.includes('english') || lowerEducation.includes('literature') ||
+        lowerEducation.includes('writing')) {
+      const coursework = ['Media Ethics', 'Research Methods', 'Writing & Composition', 'Digital Communication', 'Public Relations'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Computer Science/Software Engineering (only if specifically mentioned)
+    if (lowerEducation.includes('computer') || lowerEducation.includes('software') ||
+        lowerEducation.includes('information technology') || lowerEducation.includes('programming')) {
+      const coursework = ['Data Structures', 'Algorithms', 'Software Engineering', 'Database Systems', 'Machine Learning'];
+      return coursework.slice(0, 3).join(', ');
+    }
+    
+    // Default - General academic coursework if no specific field detected
+    const generalCoursework = ['Research Methods', 'Critical Thinking', 'Written Communication', 'Project Management', 'Analytical Methods'];
+    return generalCoursework.slice(0, 3).join(', ');
   };
 
   const generateCertificationSuggestions = (cvData: CVData): string[] => {
@@ -379,6 +451,16 @@ export default function ContextualAIAssistant({
     }
   };
 
+  const handleCloseAssistant = () => {
+    setIsVisible(false);
+    hasBeenExplicitlyClosed.current = true;
+    
+    // Reset the flag after some time to allow showing again for new content
+    setTimeout(() => {
+      hasBeenExplicitlyClosed.current = false;
+    }, 30000); // 30 seconds
+  };
+
   if (!isVisible || (!activeField && suggestions.length === 0 && activeTab === 'form')) {
     return null;
   }
@@ -399,7 +481,7 @@ export default function ContextualAIAssistant({
           )}
         </div>
         <button
-          onClick={() => setIsVisible(false)}
+          onClick={handleCloseAssistant}
           className="text-gray-400 hover:text-gray-600 transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

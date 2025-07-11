@@ -4,7 +4,7 @@
  */
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CVData } from '../../types';
 
 interface AISuggestionsProps {
@@ -42,6 +42,9 @@ export default function AISuggestions({
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [activeView, setActiveView] = useState<'general' | 'contextual'>('general');
+  
+  // Track if user has explicitly closed the assistant
+  const hasBeenExplicitlyClosed = useRef(false);
 
   // Calculate writing quality score
   const calculateWritingScore = (text: string) => {
@@ -64,6 +67,122 @@ export default function AISuggestions({
     if (text.toLowerCase().split(/\s+/).length < 5) score -= 10; // Too short
     
     return Math.max(0, Math.min(100, score));
+  };
+
+  // Helper functions for contextual education suggestions
+  const getContextualCoursework = (educationText: string): string => {
+    const lowerEducation = educationText.toLowerCase();
+    
+    // Business/Management/Economics
+    if (lowerEducation.includes('business') || lowerEducation.includes('management') || 
+        lowerEducation.includes('economics') || lowerEducation.includes('finance') ||
+        lowerEducation.includes('accounting') || lowerEducation.includes('marketing')) {
+      return 'Strategic Management, Financial Analysis, and Marketing Research';
+    }
+    
+    // Psychology/Social Sciences
+    if (lowerEducation.includes('psychology') || lowerEducation.includes('social') ||
+        lowerEducation.includes('sociology') || lowerEducation.includes('anthropology')) {
+      return 'Research Methods, Statistical Analysis, and Cognitive Psychology';
+    }
+    
+    // Engineering (non-software)
+    if (lowerEducation.includes('engineering') && !lowerEducation.includes('software') && !lowerEducation.includes('computer')) {
+      return 'Engineering Mathematics, Thermodynamics, and Systems Design';
+    }
+    
+    // Medicine/Health Sciences
+    if (lowerEducation.includes('medicine') || lowerEducation.includes('health') ||
+        lowerEducation.includes('nursing') || lowerEducation.includes('biology')) {
+      return 'Anatomy & Physiology, Pharmacology, and Medical Ethics';
+    }
+    
+    // Education/Teaching
+    if (lowerEducation.includes('education') || lowerEducation.includes('teaching')) {
+      return 'Educational Psychology, Curriculum Development, and Assessment Methods';
+    }
+    
+    // Arts/Design/Creative
+    if (lowerEducation.includes('art') || lowerEducation.includes('design') ||
+        lowerEducation.includes('creative') || lowerEducation.includes('media')) {
+      return 'Design Theory, Visual Communication, and Digital Media';
+    }
+    
+    // Law/Legal Studies
+    if (lowerEducation.includes('law') || lowerEducation.includes('legal')) {
+      return 'Constitutional Law, Contract Law, and Legal Research';
+    }
+    
+    // Communications/Journalism/English
+    if (lowerEducation.includes('communication') || lowerEducation.includes('journalism') ||
+        lowerEducation.includes('english') || lowerEducation.includes('literature')) {
+      return 'Media Ethics, Research Methods, and Digital Communication';
+    }
+    
+    // Computer Science/Software Engineering
+    if (lowerEducation.includes('computer') || lowerEducation.includes('software') ||
+        lowerEducation.includes('information technology')) {
+      return 'Advanced Data Structures, Machine Learning, and Software Engineering';
+    }
+    
+    // Default
+    return 'Research Methods, Critical Thinking, and Project Management';
+  };
+
+  const getContextualActivities = (educationText: string): string => {
+    const lowerEducation = educationText.toLowerCase();
+    
+    // Business/Management
+    if (lowerEducation.includes('business') || lowerEducation.includes('management') || 
+        lowerEducation.includes('economics') || lowerEducation.includes('finance')) {
+      return 'business competitions and leadership development programs';
+    }
+    
+    // Psychology/Social Sciences
+    if (lowerEducation.includes('psychology') || lowerEducation.includes('social')) {
+      return 'research symposiums and student counseling initiatives';
+    }
+    
+    // Engineering
+    if (lowerEducation.includes('engineering')) {
+      return 'engineering competitions and technical design projects';
+    }
+    
+    // Medicine/Health
+    if (lowerEducation.includes('medicine') || lowerEducation.includes('health') ||
+        lowerEducation.includes('nursing')) {
+      return 'medical research programs and volunteer healthcare initiatives';
+    }
+    
+    // Education/Teaching
+    if (lowerEducation.includes('education') || lowerEducation.includes('teaching')) {
+      return 'student mentoring programs and educational research projects';
+    }
+    
+    // Arts/Design
+    if (lowerEducation.includes('art') || lowerEducation.includes('design')) {
+      return 'art exhibitions and creative design projects';
+    }
+    
+    // Law
+    if (lowerEducation.includes('law') || lowerEducation.includes('legal')) {
+      return 'moot court competitions and legal aid programs';
+    }
+    
+    // Communications/Media
+    if (lowerEducation.includes('communication') || lowerEducation.includes('journalism') ||
+        lowerEducation.includes('media')) {
+      return 'student publications and media production projects';
+    }
+    
+    // Computer Science/IT
+    if (lowerEducation.includes('computer') || lowerEducation.includes('software') ||
+        lowerEducation.includes('information technology')) {
+      return 'coding competitions and student tech initiatives';
+    }
+    
+    // Default
+    return 'academic societies and research projects';
   };
 
   // Analyze text for grammar, style, and content improvements
@@ -90,45 +209,95 @@ export default function AISuggestions({
       });
     }
     
-    // Weak words detection
-    const weakWords = ['very', 'really', 'quite', 'pretty', 'somewhat', 'rather'];
-    const foundWeak = weakWords.find(word => text.toLowerCase().includes(word));
+    // Weak words detection with specific alternatives
+    const weakWordReplacements: Record<string, string[]> = {
+      'very': ['extremely', 'significantly', 'highly', 'exceptionally'],
+      'really': ['genuinely', 'truly', 'substantially', 'remarkably'],
+      'quite': ['considerably', 'notably', 'substantially', 'remarkably'],
+      'pretty': ['considerably', 'notably', 'substantially', 'fairly'],
+      'somewhat': ['moderately', 'partially', 'reasonably', 'notably'],
+      'rather': ['considerably', 'notably', 'substantially', 'particularly']
+    };
+    
+    const foundWeak = Object.keys(weakWordReplacements).find(word => 
+      text.toLowerCase().includes(word.toLowerCase())
+    );
     if (foundWeak) {
+      const alternatives = weakWordReplacements[foundWeak];
+      const randomAlt = alternatives[Math.floor(Math.random() * alternatives.length)];
+      const improvedText = text.replace(new RegExp(foundWeak, 'gi'), randomAlt);
       suggestions.push({
         type: 'word-choice',
-        issue: `Weak word: "${foundWeak}"`,
-        suggestion: text.replace(new RegExp(foundWeak, 'gi'), '[stronger alternative]'),
-        explanation: 'Avoid weak qualifiers in professional writing'
+        issue: `Replace weak word "${foundWeak}"`,
+        suggestion: improvedText,
+        explanation: `Try "${randomAlt}" instead of "${foundWeak}" for stronger professional language`
       });
     }
     
-    // Passive voice detection
-    const passiveIndicators = ['was', 'were', 'been', 'being'];
-    const hasPassive = passiveIndicators.some(word => 
-      text.toLowerCase().includes(word + ' ') && text.toLowerCase().includes('by ')
-    );
+    // Passive voice detection with specific fixes
+    const passivePatterns = [
+      { pattern: /was (\w+ed) by/gi, replacement: (match: string, verb: string) => `actively ${verb.replace('ed', '')}ed` },
+      { pattern: /were (\w+ed) by/gi, replacement: (match: string, verb: string) => `actively ${verb.replace('ed', '')}ed` },
+      { pattern: /has been (\w+ed)/gi, replacement: (match: string, verb: string) => `have ${verb.replace('ed', '')}ed` }
+    ];
+    
+    let hasPassive = false;
+    let fixedText = text;
+    
+    passivePatterns.forEach(({ pattern, replacement }) => {
+      if (pattern.test(text)) {
+        hasPassive = true;
+        fixedText = text.replace(pattern, (match, verb) => {
+          // Simple transformation for common verbs
+          const activeVerbs: Record<string, string> = {
+            'managed': 'Led and managed',
+            'developed': 'Developed and implemented',
+            'created': 'Created and delivered',
+            'designed': 'Designed and built',
+            'implemented': 'Successfully implemented'
+          };
+          return activeVerbs[verb] || `Actively ${verb}`;
+        });
+      }
+    });
+    
     if (hasPassive) {
       suggestions.push({
         type: 'voice',
-        issue: 'Possible passive voice',
-        suggestion: 'Consider using active voice',
-        explanation: 'Active voice is more engaging and direct'
+        issue: 'Convert passive to active voice',
+        suggestion: fixedText,
+        explanation: 'Active voice makes your achievements more impactful'
       });
     }
     
-    // Repetitive words
+    // Repetitive words with specific synonym suggestions
     const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 3);
     const wordCounts: Record<string, number> = {};
     words.forEach(word => {
       wordCounts[word] = (wordCounts[word] || 0) + 1;
     });
+    const synonyms: Record<string, string[]> = {
+      'experience': ['background', 'expertise', 'proficiency', 'knowledge'],
+      'developed': ['created', 'built', 'designed', 'engineered', 'implemented'],
+      'managed': ['led', 'supervised', 'coordinated', 'oversaw', 'directed'],
+      'worked': ['collaborated', 'contributed', 'participated', 'engaged'],
+      'improved': ['enhanced', 'optimized', 'strengthened', 'upgraded', 'refined'],
+      'helped': ['assisted', 'supported', 'facilitated', 'enabled', 'contributed'],
+      'responsible': ['accountable', 'in charge of', 'oversaw', 'managed', 'led'],
+      'successful': ['effective', 'accomplished', 'proven', 'outstanding', 'excellent'],
+      'project': ['initiative', 'program', 'assignment', 'undertaking', 'effort'],
+      'team': ['group', 'unit', 'department', 'crew', 'squad']
+    };
     const repeatedWords = Object.entries(wordCounts).filter(([word, count]) => (count as number) > 2);
     if (repeatedWords.length > 0) {
+      const [repeatedWord] = repeatedWords[0];
+      const wordSynonyms = synonyms[repeatedWord] || ['alternative word'];
+      const randomSynonym = wordSynonyms[Math.floor(Math.random() * wordSynonyms.length)];
       suggestions.push({
         type: 'repetition',
-        issue: `Repeated word: "${repeatedWords[0][0]}"`,
-        suggestion: 'Consider using synonyms for variety',
-        explanation: 'Varied vocabulary keeps writing engaging'
+        issue: `"${repeatedWord}" appears ${wordCounts[repeatedWord]} times`,
+        suggestion: `Try replacing one instance of "${repeatedWord}" with "${randomSynonym}" for variety.`,
+        explanation: `Consider using "${randomSynonym}" instead of "${repeatedWord}" for variety.`
       });
     }
     
@@ -159,20 +328,8 @@ export default function AISuggestions({
 
     switch (activeField) {
       case 'summary':
-        if (fieldValue.length < 50) {
-          const relevantSkills = cvData.skills.slice(0, 3).join(', ') || 'key technologies';
-          const yearsExp = cvData.experience.length > 0 ? cvData.experience.length + '+' : '3+';
-          contextualSugs.push({
-            id: 'summary-expand',
-            type: 'enhance',
-            title: 'Expand with professional details',
-            suggestion: `${fieldValue} ${yearsExp} years experienced professional specializing in ${relevantSkills}. Proven track record of delivering high-impact solutions and driving innovation in dynamic environments.`,
-            reasoning: 'Professional summaries should be 80-120 words and highlight your expertise',
-          });
-        }
-        
-        // Check for missing key elements
-        if (fieldValue && !fieldValue.match(/\d+\s*(years?|yrs?)/i)) {
+        // Only suggest years of experience if > 0 and not already present
+        if (fieldValue && !fieldValue.match(/\d+\s*(years?|yrs?)/i) && cvData.experience.length > 0) {
           contextualSugs.push({
             id: 'summary-experience',
             type: 'content',
@@ -181,7 +338,7 @@ export default function AISuggestions({
             reasoning: 'Including years of experience provides immediate context to employers'
           });
         }
-        
+        // Only suggest career objective if not already present
         if (fieldValue && !fieldValue.match(/seeking|looking|pursuing|interested/i)) {
           contextualSugs.push({
             id: 'summary-objective',
@@ -191,6 +348,7 @@ export default function AISuggestions({
             reasoning: 'A clear objective helps employers understand your career goals'
           });
         }
+        // No static or template suggestionText, no skills or years if not valid
         break;
 
       case 'experience-description':
@@ -209,38 +367,82 @@ export default function AISuggestions({
         
         // Suggest action words if the description is lacking strong verbs
         if (fieldValue && !fieldValue.match(/^(Led|Managed|Developed|Implemented|Created|Optimized|Delivered|Achieved|Improved|Reduced|Increased)/i)) {
-          const actionVerbs = ['Led', 'Managed', 'Developed', 'Implemented', 'Created', 'Optimized'];
-          const randomVerb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+          // Choose contextual action verbs based on content
+          let contextualVerbs = ['Led', 'Managed', 'Developed', 'Implemented', 'Created', 'Optimized'];
+          
+          const lowerField = fieldValue.toLowerCase();
+          if (lowerField.includes('team') || lowerField.includes('people') || lowerField.includes('staff')) {
+            contextualVerbs = ['Led', 'Managed', 'Supervised', 'Coordinated', 'Mentored'];
+          } else if (lowerField.includes('develop') || lowerField.includes('build') || lowerField.includes('code')) {
+            contextualVerbs = ['Developed', 'Built', 'Engineered', 'Designed', 'Implemented'];
+          } else if (lowerField.includes('improve') || lowerField.includes('enhance') || lowerField.includes('optimize')) {
+            contextualVerbs = ['Improved', 'Enhanced', 'Optimized', 'Streamlined', 'Transformed'];
+          } else if (lowerField.includes('sale') || lowerField.includes('revenue') || lowerField.includes('client')) {
+            contextualVerbs = ['Achieved', 'Delivered', 'Generated', 'Secured', 'Increased'];
+          }
+          
+          const bestVerb = contextualVerbs[0];
+          const improvedText = `${bestVerb} ${fieldValue.toLowerCase()}`;
+          
           contextualSugs.push({
             id: 'exp-action-verb',
             type: 'improve',
-            title: 'Start with a strong action verb',
-            suggestion: `${randomVerb} ${fieldValue.toLowerCase()}`,
-            reasoning: 'Starting bullet points with action verbs makes your experience more impactful',
+            title: `Start with "${bestVerb}" for stronger impact`,
+            suggestion: improvedText,
+            reasoning: `"${bestVerb}" is a powerful action verb that better showcases your accomplishments`,
           });
         }
         
-        // Check for vague language
-        const vagueWords = ['things', 'stuff', 'various', 'many', 'several', 'some'];
-        const foundVague = vagueWords.find(word => fieldValue.toLowerCase().includes(word));
+        // Check for vague language with specific replacements
+        const vagueReplacements: Record<string, string[]> = {
+          'things': ['projects', 'initiatives', 'tasks', 'responsibilities', 'deliverables'],
+          'stuff': ['materials', 'resources', 'components', 'elements', 'tools'],
+          'various': ['multiple', 'diverse', 'numerous', 'different', 'several'],
+          'many': ['numerous', 'multiple', '15+', 'extensive', 'substantial'],
+          'several': ['multiple', '5+', 'numerous', 'various', 'different'],
+          'some': ['specific', 'key', 'selected', 'targeted', 'particular']
+        };
+        
+        const foundVague = Object.keys(vagueReplacements).find(word => 
+          fieldValue.toLowerCase().includes(word.toLowerCase())
+        );
         if (foundVague) {
+          const alternatives = vagueReplacements[foundVague];
+          const randomAlt = alternatives[Math.floor(Math.random() * alternatives.length)];
+          const improvedText = fieldValue.replace(new RegExp(foundVague, 'gi'), randomAlt);
           contextualSugs.push({
             id: 'exp-specific',
             type: 'word-choice',
-            title: 'Be more specific',
-            suggestion: fieldValue.replace(new RegExp(foundVague, 'gi'), '[specific details]'),
-            reasoning: `Replace "${foundVague}" with specific details to make your impact clearer`
+            title: `Replace "${foundVague}" with specific details`,
+            suggestion: improvedText,
+            reasoning: `"${randomAlt}" is more specific than "${foundVague}" and shows clearer impact`
           });
         }
         
         // Suggest adding technology/tools if missing
         if (fieldValue && fieldValue.length > 20 && !fieldValue.match(/using|with|through|via/i)) {
+          // Suggest contextual tools based on job description
+          let suggestedTools = 'relevant tools and technologies';
+          const lowerField = fieldValue.toLowerCase();
+          
+          if (lowerField.includes('develop') || lowerField.includes('code') || lowerField.includes('software')) {
+            suggestedTools = 'JavaScript, React, and Node.js';
+          } else if (lowerField.includes('data') || lowerField.includes('analysis') || lowerField.includes('report')) {
+            suggestedTools = 'Python, SQL, and Tableau';
+          } else if (lowerField.includes('design') || lowerField.includes('ui') || lowerField.includes('ux')) {
+            suggestedTools = 'Figma, Adobe Creative Suite, and Sketch';
+          } else if (lowerField.includes('market') || lowerField.includes('campaign') || lowerField.includes('social')) {
+            suggestedTools = 'Google Analytics, HubSpot, and social media platforms';
+          } else if (lowerField.includes('manage') || lowerField.includes('project') || lowerField.includes('coordinate')) {
+            suggestedTools = 'Jira, Slack, and Agile methodologies';
+          }
+          
           contextualSugs.push({
             id: 'exp-tools',
             type: 'content',
-            title: 'Mention tools or technologies',
-            suggestion: `${fieldValue} using [relevant tools/technologies]`,
-            reasoning: 'Mentioning specific tools shows technical competency'
+            title: 'Add specific tools and technologies',
+            suggestion: `${fieldValue} using ${suggestedTools}`,
+            reasoning: 'Mentioning specific tools demonstrates technical competency and improves ATS matching'
           });
         }
         break;
@@ -272,11 +474,15 @@ export default function AISuggestions({
 
       case 'education-description':
         if (fieldValue && fieldValue.length < 30) {
+          // Generate contextual coursework based on education field
+          const contextualCoursework = getContextualCoursework(fieldValue);
+          const contextualActivities = getContextualActivities(fieldValue);
+          
           contextualSugs.push({
             id: 'edu-expand',
             type: 'enhance',
             title: 'Enhance education details',
-            suggestion: `${fieldValue} Relevant coursework included Advanced Data Structures, Machine Learning, and Software Engineering. Graduated Magna Cum Laude with active participation in coding competitions and student tech initiatives.`,
+            suggestion: `${fieldValue} Relevant coursework included ${contextualCoursework}. Graduated Magna Cum Laude with active participation in ${contextualActivities}.`,
             reasoning: 'Detailed education descriptions showcase relevant learning and achievements',
           });
         }
@@ -471,7 +677,8 @@ export default function AISuggestions({
       if (cvData.personalInfo.name || cvData.experience.length > 0 || cvData.skills.length > 0) {
         const newSuggestions = await generateSuggestions();
         setSuggestions(newSuggestions);
-        if (newSuggestions.length > 0) {
+        // Only show automatically if not explicitly closed by user and has suggestions
+        if (newSuggestions.length > 0 && !hasBeenExplicitlyClosed.current) {
           setIsVisible(true);
         }
       }
@@ -509,13 +716,46 @@ export default function AISuggestions({
     setSuggestions(prev => prev.filter(s => s.id !== suggestionId));
   };
 
-  if (!isVisible && suggestions.length === 0 && contextualSuggestions.length === 0) return null;
+  const handleCloseAssistant = () => {
+    setIsVisible(false);
+    hasBeenExplicitlyClosed.current = true;
+    
+    // Reset the flag after some time to allow showing again for new content
+    setTimeout(() => {
+      hasBeenExplicitlyClosed.current = false;
+    }, 30000); // 30 seconds
+  };
+
+  const handleReopenAssistant = () => {
+    setIsVisible(true);
+    hasBeenExplicitlyClosed.current = false;
+  };
+
+  // Show reopen button when assistant is closed
+  if (!isVisible) {
+    return (
+      <button
+        onClick={handleReopenAssistant}
+        className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-105 z-50 flex items-center justify-center group"
+        title="Open AI Assistant"
+      >
+        <div className="relative">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+          </svg>
+          <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+        </div>
+        <div className="absolute bottom-full right-0 mb-2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity">
+          AI Assistant
+        </div>
+      </button>
+    );
+  }
 
   return (
     <div 
       data-ai-assistant
       className="fixed bottom-6 right-6 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[700px] overflow-hidden"
-      onMouseDown={(e) => e.preventDefault()} // Prevent losing focus when clicking
     >
       {/* Header with Tabs */}
       <div className="bg-gradient-to-r from-blue-500 to-purple-500 text-white p-4 rounded-t-xl">
@@ -527,7 +767,7 @@ export default function AISuggestions({
             <h3 className="font-semibold text-sm">AI Assistant</h3>
           </div>
           <button
-            onClick={() => setIsVisible(false)}
+            onClick={handleCloseAssistant}
             className="text-white/80 hover:text-white transition-colors"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
