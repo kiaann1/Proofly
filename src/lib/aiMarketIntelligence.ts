@@ -1,6 +1,7 @@
 import { FreeAIAnalyzer } from './freeAI';
 import { CVData } from '../types';
 import { HfInference } from '@huggingface/inference';
+import { getLLMMarketInsights } from './llmMarketIntelligence';
 
 export interface AIMarketData {
   role: string;
@@ -57,33 +58,10 @@ export class AIMarketIntelligenceService {
    */
   static async generateMarketIntelligence(cvData: CVData): Promise<AIMarketData> {
     try {
-      const cvText = this.formatCVForAnalysis(cvData);
-      
-      // Use AI to analyze market position and generate insights
-      const [
-        roleAnalysis,
-        industryAnalysis,
-        salaryData,
-        demandMetrics
-      ] = await Promise.allSettled([
-        this.analyzeRole(cvText),
-        this.analyzeIndustry(cvText),
-        this.generateSalaryData(cvData),
-        this.generateDemandMetrics(cvData)
-      ]);
-
-      return {
-        role: this.extractRole(cvData),
-        industry: this.extractIndustry(cvData),
-        location: cvData.personalInfo.location || 'UK',
-        salaryData: await this.generateSalaryData(cvData),
-        demandMetrics: await this.generateDemandMetrics(cvData),
-        skillsAnalysis: await this.generateSkillsAnalysis(cvData),
-        careerProgression: await this.generateCareerProgression(cvData)
-      };
-    } catch (error) {
-      console.error('AI Market Intelligence failed:', error);
-      return this.fallbackMarketData(cvData);
+      const insights = await getLLMMarketInsights(cvData);
+      return insights;
+    } catch (e) {
+      return { error: 'The AI was unable to generate market insights at this time.' } as any;
     }
   }
 
@@ -422,37 +400,15 @@ export class AIMarketIntelligenceService {
     return advantages.length > 0 ? advantages : ['Professional experience', 'Technical skills'];
   }
 
+  // LLM-driven suggestions only
   private static async suggestNextRole(currentRole: string, skills: string[]): Promise<string> {
-    // Simple role progression logic - could be enhanced with AI
-    const roleProgression: { [key: string]: string } = {
-      'developer': 'Senior Developer',
-      'engineer': 'Senior Engineer',
-      'analyst': 'Senior Analyst',
-      'manager': 'Senior Manager',
-      'consultant': 'Senior Consultant'
-    };
-    
-    const lowerRole = currentRole.toLowerCase();
-    for (const [role, nextRole] of Object.entries(roleProgression)) {
-      if (lowerRole.includes(role)) {
-        return nextRole;
-      }
-    }
-    
-    return 'Senior Professional';
+    const insights = await getLLMMarketInsights({ currentRole, skills });
+    return insights?.careerProgression?.nextRole || 'AI Suggestion Unavailable';
   }
 
-  private static suggestRequiredSkills(currentSkills: string[]): string[] {
-    const suggestions = ['Leadership', 'Strategic Planning', 'Team Management'];
-    const techSuggestions = ['Cloud Architecture', 'AI/ML', 'DevOps'];
-    
-    const hasTechSkills = currentSkills.some(skill => 
-      ['javascript', 'python', 'react', 'aws'].some(tech => 
-        skill.toLowerCase().includes(tech)
-      )
-    );
-    
-    return hasTechSkills ? techSuggestions : suggestions;
+  private static async suggestRequiredSkills(currentSkills: string[]): Promise<string[]> {
+    const insights = await getLLMMarketInsights({ skills: currentSkills });
+    return insights?.skillsAnalysis?.requiredSkills || ['AI Suggestion Unavailable'];
   }
 
   private static calculateSkillDemandScore(skill: string): number {

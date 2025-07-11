@@ -1,5 +1,6 @@
 import { CVData } from '../types';
 import { FreeAIAnalyzer } from './freeAI';
+import { getLLMRecommendations } from './llmAiAnalyzer';
 
 export interface AIAnalysisResult {
   overallScore: number;
@@ -547,6 +548,10 @@ export class AIAnalyzer {
     };
   }
   
+  private static async generateContentRecommendations(cvData: CVData): Promise<string[]> {
+    return await getLLMRecommendations(cvData);
+  }
+  
   private static analyzeCompetitivePosition(cvData: CVData) {
     const marketPosition = this.calculateMarketPosition(cvData);
     const strengthsVsMarket = this.identifyStrengths(cvData);
@@ -869,30 +874,5 @@ export class AIAnalyzer {
     }, 0);
     
     return Math.min(achievementsWithNumbers * 25, 95);
-  }
-  
-  private static generateContentRecommendations(cvData: CVData): string[] {
-    const recommendations = [];
-    
-    if (!cvData.personalInfo.summary || cvData.personalInfo.summary.length < 100) {
-      recommendations.push('Add a compelling professional summary (150-200 words)');
-    }
-    
-    const hasQuantifiedAchievements = cvData.experience.some((exp: any) =>
-      exp.achievements?.some((achievement: string) => /\d+/.test(achievement))
-    );
-    
-    if (!hasQuantifiedAchievements) {
-      recommendations.push('Quantify achievements with specific numbers and metrics');
-    }
-    
-    if (cvData.skills.length < 8) {
-      recommendations.push('Expand skills section to include more relevant technologies');
-    }
-    
-    recommendations.push('Optimize for ATS with industry-specific keywords');
-    recommendations.push('Include action verbs in experience descriptions');
-    
-    return recommendations.slice(0, 4); // Return top 4 recommendations
   }
 }

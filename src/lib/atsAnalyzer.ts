@@ -1,4 +1,6 @@
-import { CVData, ATSAnalysis, KeywordAnalysis, FormatAnalysis, ContentAnalysis, ATSSuggestion, JobDescription, Experience, Education, Certification } from '../types';
+import { CVData, ATSSuggestion, JobDescription } from '../types';
+import { getLLMRecommendations } from './llmAiAnalyzer';
+import { getLLMContentSuggestions } from './llmContentChecker';
 
 /**
  * Enhanced ATS Format Checker based on ResumeHelp recommendations
@@ -804,7 +806,7 @@ export async function analyzeATS(cvData: CVData, jobDescriptionText: string = ''
       overallScore = Math.max(15, overallScore);
       
       // Generate suggestions based on analysis including new ATS format issues
-      const suggestions = generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData, atsFormatIssues, enhancedKeywordMatch);
+      const suggestions = await generateSuggestions(keywordAnalysis, formatAnalysis, contentAnalysis, jobDescription, cvData, atsFormatIssues, enhancedKeywordMatch);
       
       // Create overall feedback
       const overallFeedback = generateOverallFeedback(overallScore, keywordAnalysis, formatAnalysis, contentAnalysis);
@@ -1109,7 +1111,7 @@ function analyzeContent(cvData: CVData): ContentAnalysis {
 /**
  * Generate actionable suggestions based on analysis
  */
-function generateSuggestions(
+export async function generateSuggestions(
   keywordAnalysis: KeywordAnalysis,
   formatAnalysis: FormatAnalysis,
   contentAnalysis: ContentAnalysis,
@@ -1117,260 +1119,42 @@ function generateSuggestions(
   cvData?: CVData,
   atsFormatIssues?: ATSFormatIssue[],
   enhancedKeywordMatch?: any
-): ATSSuggestion[] {
-  const suggestions: ATSSuggestion[] = [];
-  let suggestionId = 1;
-  
-  // Add ATS format issue suggestions first (highest priority)
-  if (atsFormatIssues && atsFormatIssues.length > 0) {
-    atsFormatIssues.forEach(issue => {
-      suggestions.push({
-        id: (suggestionId++).toString(),
-        type: 'format',
-        priority: issue.severity === 'critical' ? 'high' : issue.severity === 'high' ? 'medium' : 'low',
-        title: `ATS Compatibility: ${issue.type}`,
-        description: issue.message,
-        actionable: true,
-        implementationGuide: issue.suggestion,
-        whyImportant: 'ATS systems may fail to parse your CV correctly, causing it to be rejected automatically.'
-      });
-    });
-  }
-  
-  // Enhanced keyword suggestions
-  if (enhancedKeywordMatch && enhancedKeywordMatch.missingKeywords.length > 0) {
-    const criticalMissing = enhancedKeywordMatch.missingKeywords.slice(0, 5); // Top 5 missing
-    if (criticalMissing.length > 0) {
-      suggestions.push({
-        id: (suggestionId++).toString(),
-        type: 'keyword',
+): Promise<ATSSuggestion[]> {
+  // Compose a prompt for the LLM to generate actionable CV suggestions
+  const cvText = cvData ? getCVText(cvData) : '';
+  const jobText = jobDescription?.text || '';
+  const prompt = `You are an expert CV and ATS advisor. Given the following CV content: "${cvText}" and job description: "${jobText}", generate a list of 5-10 actionable, specific suggestions to improve the CV for ATS and recruiter success. Each suggestion should have a title, a short description, and a field (e.g., summary, skills, experience, education, etc). Return as JSON array with objects: {title, description, field}.`;
+  let llmResult = '';
+  try {
+    llmResult = await getSmolLMSuggestion(prompt);
+    // Try to parse the LLM output as JSON
+    const suggestions = JSON.parse(llmResult);
+    // Map to ATSSuggestion[]
+    return suggestions.map((s: any, idx: number) => ({
+      id: `llm-${idx}`,
+      type: 'content', // Use allowed type
+      priority: 'high',
+      title: s.title,
+      description: s.description,
+      value: '',
+      confidence: 99,
+      field: s.field,
+    }));
+  } catch (e) {
+    // If LLM output is not valid JSON, return a fallback
+    return [
+      {
+        id: 'llm-fallback',
+        type: 'improvement',
         priority: 'high',
-        title: 'Missing Critical Keywords',
-        description: `Your CV is missing key terms that recruiters are looking for: ${criticalMissing.join(', ')}`,
-        actionable: true,
-        implementationGuide: 'Review the job description and incorporate these relevant keywords naturally into your experience descriptions and skills section.',
-        whyImportant: 'ATS systems score CVs higher when they contain relevant keywords from the job description.'
-      });
-    }
-  }
-  
-  // Check if job description is provided
-  const hasJobDescription = jobDescription.text.trim().length > 0;
-  
-  // If no job description, provide guidance on adding one first
-  if (!hasJobDescription) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'guidance',
-      priority: 'high',
-      title: 'Add Job Description for Keyword Analysis',
-      description: 'To get accurate keyword matching and targeted suggestions, please add the job description you\'re applying for in the "Job Description" tab.',
-      actionable: false,
-      autoFixAvailable: false,
-      whyImportant: 'ATS systems compare your CV against specific job requirements. Without the job description, we cannot provide targeted keyword recommendations or measure relevance to the specific role.',
-      howToImplement: 'Copy and paste the complete job description from the job posting into the "Job Description" tab, then return here for a comprehensive analysis.',
-    });
-  }
-  
-  // Keyword Suggestions (only if job description is provided)
-  if (hasJobDescription && keywordAnalysis.missingKeywords.length > 0) {
-    const criticalKeywords = keywordAnalysis.missingKeywords.slice(0, 3);
-    const mediumKeywords = keywordAnalysis.missingKeywords.slice(3, 8);
-    
-    if (criticalKeywords.length > 0) {
-      suggestions.push({
-        id: (suggestionId++).toString(),
-        type: 'keyword',
-        priority: 'high',
-        title: `Add ${criticalKeywords.length} Critical Keywords`,
-        description: `These high-impact keywords are missing from your CV: ${criticalKeywords.join(', ')}. Consider incorporating them into your professional summary, experience descriptions, or skills section.`,
-        actionable: true,
-        autoFixAvailable: true,
-        whyImportant: 'ATS systems scan for specific keywords to match your CV with job requirements. Missing critical keywords can result in your application being filtered out before human review.',
-        howToImplement: 'Add these keywords naturally to your professional summary, work experience bullet points, or skills section. Ensure they accurately reflect your experience and avoid keyword stuffing.',
-      });
-    }
-    
-    if (mediumKeywords.length > 0) {
-      suggestions.push({
-        id: (suggestionId++).toString(),
-        type: 'keyword',
-        priority: 'medium',
-        title: `Consider Adding ${mediumKeywords.length} Additional Keywords`,
-        description: `These relevant keywords could strengthen your application: ${mediumKeywords.join(', ')}. Include them where they naturally fit your experience.`,
-        actionable: true,
-        autoFixAvailable: true,
-        whyImportant: 'Additional relevant keywords increase your chances of ranking higher in ATS searches and demonstrate broader competency alignment with the role.',
-        howToImplement: 'Review your work experience and add these keywords where they genuinely apply. Use variations in bullet points and ensure they match your actual skills and experience.',
-      });
-    }
-  }
-  
-  // Professional Summary Enhancement
-  if (!cvData?.personalInfo?.summary || cvData.personalInfo.summary.length < 100) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'content',
-      priority: 'high',
-      title: 'Enhance Professional Summary',
-      description: 'Your professional summary should be 3-4 sentences highlighting your key qualifications, years of experience, and career objectives. Include 2-3 keywords from the job description.',
-      actionable: true,
-      autoFixAvailable: true,
-      whyImportant: 'The professional summary is often the first section ATS systems and recruiters read. A strong summary with relevant keywords significantly improves your chances of passing initial screening.',
-      howToImplement: 'Write 3-4 sentences: Start with your job title and years of experience, highlight 2-3 key achievements with numbers, mention relevant skills from the job posting, and end with your career objective.',
-    });
-  }
-  
-  // Skills Section Optimization
-  if (!cvData?.skills || cvData.skills.length < 5) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'content',
-      priority: 'high',
-      title: 'Expand Skills Section',
-      description: 'Add more relevant technical and soft skills. Aim for 8-12 skills that match the job requirements. Include both technical tools and transferable skills.',
-      actionable: true,
-      autoFixAvailable: true,
-      whyImportant: 'A comprehensive skills section helps ATS systems match your profile with job requirements and shows recruiters your full capability range.',
-      howToImplement: 'List technical skills from the job posting, add software proficiencies, include relevant certifications, and mention key soft skills like leadership or communication.',
-    });
-  }
-  
-  // Experience Quantification
-  if (!contentAnalysis.hasMeasurableResults) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'content',
-      priority: 'high',
-      title: 'Add Quantifiable Achievements',
-      description: 'Include specific numbers, percentages, or time frames in your achievements. Examples: "Increased sales by 25%", "Managed team of 10", "Reduced processing time by 30%".',
-      actionable: true,
-      autoFixAvailable: false,
-      whyImportant: 'Quantified achievements demonstrate tangible impact and results. They make your accomplishments more credible and help you stand out from other candidates who use vague descriptions.',
-      howToImplement: 'Review each bullet point and ask: How much? How many? How often? By what percentage? Add specific metrics like revenue increases, cost savings, team sizes, project timelines, or process improvements.',
-    });
-  }
-  
-  // Action Verbs Enhancement
-  if (!contentAnalysis.hasActionVerbs) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'content',
-      priority: 'medium',
-      title: 'Use Stronger Action Verbs',
-      description: 'Replace weak verbs with powerful action words. Instead of "responsible for", use "managed", "led", "developed", "implemented", "optimised", "achieved".',
-      actionable: true,
-      autoFixAvailable: true,
-      whyImportant: 'Strong action verbs make your CV more dynamic and impactful. They clearly demonstrate your active role in achievements and help you stand out to both ATS systems and human recruiters.',
-      howToImplement: 'Start each bullet point with a strong action verb. Replace passive phrases like "was responsible for" with active verbs like "managed", "developed", "implemented", or "achieved".',
-    });
-  }
-  
-  // Experience Section Completeness
-  if (!cvData?.experience || cvData.experience.length === 0) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'structure',
-      priority: 'high',
-      title: 'Add Work Experience',
-      description: 'Include your work history with job titles, company names, dates, and 3-5 bullet points describing your key achievements and responsibilities.',
-      actionable: true,
-      autoFixAvailable: false,
-      whyImportant: 'Work experience is the most important section for most roles. It demonstrates your practical skills, career progression, and relevant background.',
-      howToImplement: 'List your recent roles in reverse chronological order. Include job title, company name, dates, and 3-5 bullet points highlighting your key achievements and responsibilities.',
-    });
-  } else if (cvData.experience.some(exp => exp.achievements.length < 2)) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'content',
-      priority: 'medium',
-      title: 'Expand Job Descriptions',
-      description: 'Each role should have 3-5 bullet points describing specific achievements and responsibilities. Focus on results and impact rather than duties.',
-      actionable: true,
-      autoFixAvailable: false,
-      whyImportant: 'Detailed job descriptions provide context for your experience and help recruiters understand your capabilities and achievements.',
-      howToImplement: 'For each role, add 3-5 bullet points focusing on achievements rather than duties. Use the STAR method (Situation, Task, Action, Result) to structure your descriptions.',
-    });
-  }
-  
-  // Format suggestions with more detail
-  formatAnalysis.problematicElements.forEach(element => {
-    let priority: 'high' | 'medium' | 'low' = 'medium';
-    let enhancedDescription = element;
-    let whyImportant = 'Proper formatting ensures your CV is ATS-friendly and presents a professional appearance to recruiters.';
-    let howToImplement = 'Review and update the formatting to meet professional standards.';
-    
-    if (element.includes('Missing')) {
-      priority = 'high';
-      if (element.includes('contact')) {
-        enhancedDescription = 'Add complete contact information including phone number, professional email, and location (city, state). Consider adding LinkedIn profile.';
-        whyImportant = 'Contact information is essential for recruiters to reach you. Missing contact details can result in missed opportunities.';
-        howToImplement = 'Add your full name, professional email address, phone number, and location. Include LinkedIn profile URL for professional networking.';
+        title: 'AI Suggestion Unavailable',
+        description: 'The AI was unable to generate suggestions at this time.',
+        value: '',
+        confidence: 0,
+        field: '',
       }
-    }
-    
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'format',
-      priority,
-      title: 'Format Optimisation',
-      description: enhancedDescription,
-      actionable: true,
-      autoFixAvailable: element.includes('Missing'),
-      whyImportant,
-      howToImplement,
-    });
-  });
-  
-  // Advanced ATS Optimization
-  if (keywordAnalysis.score < 70) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'keyword',
-      priority: 'medium',
-      title: 'Improve Keyword Density',
-      description: 'Your keyword match score is below 70%. Review the job description and naturally incorporate more relevant terms throughout your CV.',
-      actionable: true,
-      autoFixAvailable: false,
-      whyImportant: 'ATS systems rank CVs based on keyword matching. A higher keyword score increases your chances of passing the initial screening and reaching human recruiters.',
-      howToImplement: 'Compare your CV with the job description. Identify missing keywords and incorporate them naturally into your experience descriptions, skills section, and professional summary.',
-    });
+    ];
   }
-  
-  // Education Enhancement
-  if (!contentAnalysis.sectionCompleteness.education) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'structure',
-      priority: 'low',
-      title: 'Add Education Section',
-      description: 'Include your educational background with degree, institution, graduation year, and relevant coursework or honors.',
-      actionable: true,
-      autoFixAvailable: false,
-      whyImportant: 'Educational qualifications demonstrate your foundational knowledge and may be required for certain roles. Some ATS systems specifically look for education credentials.',
-      howToImplement: 'Add a dedicated education section listing your degrees in reverse chronological order. Include degree name, institution, graduation year, and any relevant honors or coursework.',
-    });
-  }
-  
-  // Content length check
-  if (contentAnalysis.wordCount < 200) {
-    suggestions.push({
-      id: (suggestionId++).toString(),
-      type: 'content',
-      priority: 'medium',
-      title: 'Expand Content',
-      description: 'Your CV seems too brief. Add more details about your experience and achievements.',
-      actionable: true,
-      autoFixAvailable: false,
-      whyImportant: 'A CV that is too brief may lack sufficient detail to demonstrate your qualifications. Most effective CVs contain enough content to showcase your experience and achievements comprehensively.',
-      howToImplement: 'Expand your work experience descriptions with more specific achievements and responsibilities. Add quantifiable results, additional skills, and relevant projects or certifications.',
-    });
-  }
-  
-  return suggestions.sort((a, b) => {
-    const priorityOrder = { high: 3, medium: 2, low: 1 };
-    return priorityOrder[b.priority] - priorityOrder[a.priority];
-  });
 }
 
 /**
@@ -1426,4 +1210,38 @@ function getCVText(cvData: CVData): string {
   });
   
   return parts.filter(Boolean).join(' ');
+}
+
+/**
+ * All ATS analysis and suggestions should be LLM-driven. Remove static checks and scoring.
+ */
+export async function getATSSuggestions(cvData: CVData, jobDescription?: JobDescription): Promise<ATSSuggestion[]> {
+  const suggestions = await getLLMRecommendations(cvData);
+  return suggestions.map((s, i) => ({
+    id: `llm-${i}`,
+    type: 'guidance',
+    priority: 'medium',
+    title: s,
+    description: s,
+    actionable: true
+  }));
+}
+
+/**
+ * ATS analysis and scoring using LLM
+ */
+export async function getAtsAnalysisLLM(cvData: CVData): Promise<ATSAnalysis> {
+  const cvText = JSON.stringify(cvData);
+  const analysis = await getLLMContentSuggestions({}, cvText);
+  return {
+    contentAnalysis: {}, // LLM should provide this structure
+    suggestions: analysis.map((s: string, i: number) => ({
+      id: `llm-${i}`,
+      type: 'guidance',
+      priority: 'medium',
+      title: s,
+      description: s,
+      actionable: true
+    }))
+  };
 }

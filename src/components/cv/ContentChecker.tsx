@@ -6,7 +6,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { CVData } from '../../types';
-import { analyzeContent, getContentSuggestions, ContentAnalysis, ContentIssue } from '../../lib/contentChecker';
+import { analyzeContent, ContentAnalysis, ContentIssue } from '../../lib/contentChecker';
+import { getLLMContentSuggestions } from '../../lib/llmContentChecker';
 
 interface ContentCheckerProps {
   cvData: CVData;
@@ -17,32 +18,30 @@ const ContentChecker: React.FC<ContentCheckerProps> = ({ cvData, onSuggestionApp
   const [analysis, setAnalysis] = useState<ContentAnalysis | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedSection, setSelectedSection] = useState<string>('all');
+  const [llmSuggestions, setLlmSuggestions] = useState<string[]>([]);
+  const [llmLoading, setLlmLoading] = useState(false);
 
   // Combine all CV text content for analysis
   const getCombinedContent = (section: string = 'all') => {
     let content = '';
-    
     if (section === 'all' || section === 'summary') {
       content += cvData.personalInfo.summary || '';
     }
-    
     if (section === 'all' || section === 'experience') {
       cvData.experience.forEach(exp => {
         content += ` ${exp.description || ''} ${exp.achievements.join(' ')}`;
       });
     }
-    
     if (section === 'all' || section === 'education') {
       cvData.education.forEach(edu => {
         content += ` ${edu.description || ''}`;
       });
     }
-      if (section === 'all' || section === 'certifications') {
+    if (section === 'all' || section === 'certifications') {
       cvData.certifications.forEach(cert => {
         content += ` ${cert.name} ${cert.issuer}`;
       });
     }
-    
     return content.trim();
   };
 
@@ -50,18 +49,26 @@ const ContentChecker: React.FC<ContentCheckerProps> = ({ cvData, onSuggestionApp
   useEffect(() => {
     const performAnalysis = async () => {
       setIsAnalyzing(true);
+      setLlmSuggestions([]);
+      setLlmLoading(false);
       const content = getCombinedContent(selectedSection);
-      
       if (content.length > 10) {
         const result = analyzeContent(content);
         setAnalysis(result);
+        setLlmLoading(true);
+        try {
+          const suggestions = await getLLMContentSuggestions(result, content);
+          setLlmSuggestions(suggestions);
+        } catch {
+          setLlmSuggestions(['The AI was unable to generate suggestions at this time.']);
+        }
+        setLlmLoading(false);
       } else {
         setAnalysis(null);
+        setLlmSuggestions([]);
       }
-      
       setIsAnalyzing(false);
     };
-
     const debounceTimer = setTimeout(performAnalysis, 500);
     return () => clearTimeout(debounceTimer);
   }, [cvData, selectedSection]);
@@ -107,7 +114,6 @@ const ContentChecker: React.FC<ContentCheckerProps> = ({ cvData, onSuggestionApp
           <option value="certifications">Certifications</option>
         </select>
       </div>
-
       {isAnalyzing ? (
         <div className="bg-gray-50 rounded-lg p-6 text-center">
           <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mx-auto mb-2"></div>
@@ -144,7 +150,6 @@ const ContentChecker: React.FC<ContentCheckerProps> = ({ cvData, onSuggestionApp
               </div>
             </div>
           </div>
-
           {/* Issues */}
           {analysis.issues.length > 0 && (
             <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -180,44 +185,34 @@ const ContentChecker: React.FC<ContentCheckerProps> = ({ cvData, onSuggestionApp
               </div>
             </div>
           )}
-
-          {/* Suggestions */}
+          {/* LLM Suggestions */}
           <div className="bg-white rounded-lg border border-gray-200 p-6">
-            <h4 className="font-semibold text-gray-900 mb-4">Improvement Suggestions</h4>
-            <div className="space-y-3">
-              {getContentSuggestions(analysis).map((suggestion, index) => (
-                <div
-                  key={index}
-                  className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200"
-                >
-                  <div className="text-blue-600 mt-1">💡</div>
-                  <div className="flex-1">
-                    <p className="text-sm text-blue-800">{suggestion}</p>
+            <h4 className="font-semibold text-gray-900 mb-4">AI Improvement Suggestions</h4>
+            {llmLoading ? (
+              <div className="text-blue-500">Generating AI suggestions...</div>
+            ) : (
+              <div className="space-y-3">
+                {llmSuggestions.map((suggestion, index) => (
+                  <div
+                    key={index}
+                    className="flex items-start space-x-3 p-3 bg-blue-50 rounded-lg border border-blue-200"
+                  >
+                    <div className="text-blue-600 mt-1">💡</div>
+                    <div className="flex-1">
+                      <p className="text-sm text-blue-800">{suggestion}</p>
+                    </div>
+                    {onSuggestionApply && (
+                      <button
+                        onClick={() => onSuggestionApply(suggestion)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                      >
+                        Apply
+                      </button>
+                    )}
                   </div>
-                  {onSuggestionApply && (
-                    <button
-                      onClick={() => onSuggestionApply(suggestion)}
-                      className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                    >
-                      Apply
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Tips */}
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg border border-green-200 p-6">
-            <h4 className="font-semibold text-gray-900 mb-3">💡 Pro Tips</h4>
-            <ul className="text-sm text-gray-700 space-y-2">
-              <li>• Use specific numbers and metrics to quantify your achievements</li>
-              <li>• Start bullet points with strong action verbs (achieved, developed, led)</li>
-              <li>• Avoid first-person pronouns (I, me, my) in professional descriptions</li>
-              <li>• Keep sentences concise and impactful</li>
-              <li>• Replace cliché phrases with unique, specific language</li>
-              <li>• Tailor content to match job requirements and keywords</li>
-            </ul>
+                ))}
+              </div>
+            )}
           </div>
         </>
       ) : null}

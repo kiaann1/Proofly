@@ -183,7 +183,6 @@ export class FreeAIAnalyzer {
   static async generateRecommendations(cvData: CVData): Promise<string[]> {
     try {
       const cvText = this.formatCVText(cvData);
-      
       // Use question-answering model for recommendations
       const recommendations = await this.hf.questionAnswering({
         model: 'deepset/roberta-base-squad2',
@@ -192,21 +191,10 @@ export class FreeAIAnalyzer {
           context: cvText
         }
       });
-
-      return [
-        recommendations.answer,
-        'Expand your skill set with emerging technologies',
-        'Quantify your achievements with specific metrics',
-        'Consider industry certifications to boost credibility'
-      ];
+      return [recommendations.answer];
     } catch (error) {
       console.error('Recommendations generation failed:', error);
-      return [
-        'Focus on quantifying your achievements',
-        'Add relevant industry keywords',
-        'Consider additional certifications',
-        'Highlight leadership experiences'
-      ];
+      return ['The AI was unable to generate suggestions at this time.'];
     }
   }
 

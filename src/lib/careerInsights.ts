@@ -1,4 +1,5 @@
 import { CVData } from '../types';
+import { getLLMCareerInsights } from './llmCareerInsights';
 
 export interface CareerInsight {
   id: string;
@@ -66,27 +67,7 @@ export interface PersonalizedRecommendations {
 export class CareerInsightsEngine {
   
   static async generateInsights(cvData: CVData): Promise<CareerInsight[]> {
-    const insights: CareerInsight[] = [];
-    
-    // Skill gap analysis
-    insights.push(...this.analyzeSkillGaps(cvData));
-    
-    // Career progression opportunities
-    insights.push(...this.identifyCareerOpportunities(cvData));
-    
-    // Market trend insights
-    insights.push(...this.generateMarketTrendInsights(cvData));
-    
-    // Salary optimization insights
-    insights.push(...this.analyzeSalaryOptimization(cvData));
-    
-    // Industry transition opportunities
-    insights.push(...this.identifyIndustryTransitions(cvData));
-    
-    return insights.sort((a, b) => {
-      const priorityOrder = { critical: 4, high: 3, medium: 2, low: 1 };
-      return priorityOrder[b.priority] - priorityOrder[a.priority];
-    });
+    return await getLLMCareerInsights(cvData);
   }
   
   static async generateCareerPathways(cvData: CVData): Promise<CareerPathway[]> {
@@ -220,143 +201,6 @@ export class CareerInsightsEngine {
         }
       ]
     };
-  }
-  
-  private static analyzeSkillGaps(cvData: CVData): CareerInsight[] {
-    const insights: CareerInsight[] = [];
-    
-    // Check for missing in-demand skills
-    const inDemandSkills = ['React', 'Python', 'AWS', 'Machine Learning', 'TypeScript'];
-    const userSkills = cvData.skills.map(s => s.toLowerCase());
-    
-    const missingSkills = inDemandSkills.filter(skill => 
-      !userSkills.some(userSkill => userSkill.includes(skill.toLowerCase()))
-    );
-    
-    if (missingSkills.length > 0) {
-      insights.push({
-        id: 'skill-gaps',
-        title: 'High-Value Skills Missing',
-        description: `You're missing ${missingSkills.length} high-demand skills that could increase your earning potential by 15-25%.`,
-        type: 'opportunity',
-        priority: 'high',
-        actionable: true,
-        estimatedImpact: {
-          salaryIncrease: 20,
-          careerAcceleration: '6-12 months faster progression'
-        },
-        nextSteps: [
-          `Learn ${missingSkills[0]} through online courses`,
-          'Build portfolio projects demonstrating new skills',
-          'Update CV and LinkedIn profile'
-        ],
-        timeline: '3-6 months'
-      });
-    }
-    
-    return insights;
-  }
-  
-  private static identifyCareerOpportunities(cvData: CVData): CareerInsight[] {
-    const insights: CareerInsight[] = [];
-    const yearsExperience = this.calculateExperienceYears(cvData);
-    
-    if (yearsExperience >= 3 && yearsExperience < 6) {
-      insights.push({
-        id: 'senior-transition',
-        title: 'Ready for Senior Role Transition',
-        description: 'Your experience level suggests you\'re ready to transition to senior positions with significant salary increases.',
-        type: 'opportunity',
-        priority: 'high',
-        actionable: true,
-        estimatedImpact: {
-          salaryIncrease: 25,
-          careerAcceleration: 'Immediate opportunity'
-        },
-        nextSteps: [
-          'Apply for senior-level positions',
-          'Highlight leadership experiences',
-          'Prepare for technical leadership interviews'
-        ],
-        timeline: '1-3 months'
-      });
-    }
-    
-    return insights;
-  }
-  
-  private static generateMarketTrendInsights(cvData: CVData): CareerInsight[] {
-    const insights: CareerInsight[] = [];
-    
-    insights.push({
-      id: 'ai-trend',
-      title: 'AI Skills in High Demand',
-      description: 'AI and machine learning skills are seeing 300% growth in job postings. Early adoption could position you ahead of the curve.',
-      type: 'trend',
-      priority: 'medium',
-      actionable: true,
-      estimatedImpact: {
-        salaryIncrease: 30,
-        skillDevelopment: 'Future-proof your career'
-      },
-      nextSteps: [
-        'Take introductory AI/ML courses',
-        'Apply AI concepts to current projects',
-        'Join AI communities and forums'
-      ],
-      timeline: '6-12 months'
-    });
-    
-    return insights;
-  }
-  
-  private static analyzeSalaryOptimization(cvData: CVData): CareerInsight[] {
-    const insights: CareerInsight[] = [];
-    
-    insights.push({
-      id: 'salary-negotiation',
-      title: 'Potential for Salary Negotiation',
-      description: 'Based on your skills and experience, you may be earning 10-15% below market rate.',
-      type: 'recommendation',
-      priority: 'medium',
-      actionable: true,
-      estimatedImpact: {
-        salaryIncrease: 12
-      },
-      nextSteps: [
-        'Research salary benchmarks for your role',
-        'Document your achievements and value-add',
-        'Schedule performance review meeting'
-      ],
-      timeline: '1-2 months'
-    });
-    
-    return insights;
-  }
-  
-  private static identifyIndustryTransitions(cvData: CVData): CareerInsight[] {
-    const insights: CareerInsight[] = [];
-    
-    insights.push({
-      id: 'fintech-transition',
-      title: 'Strong Fit for FinTech Industry',
-      description: 'Your technical skills and analytical background make you an excellent candidate for high-paying FinTech roles.',
-      type: 'opportunity',
-      priority: 'medium',
-      actionable: true,
-      estimatedImpact: {
-        salaryIncrease: 20,
-        careerAcceleration: 'Access to high-growth industry'
-      },
-      nextSteps: [
-        'Learn about financial technologies',
-        'Network with FinTech professionals',
-        'Apply to FinTech companies'
-      ],
-      timeline: '3-6 months'
-    });
-    
-    return insights;
   }
   
   private static extractCurrentRole(cvData: CVData): string {
