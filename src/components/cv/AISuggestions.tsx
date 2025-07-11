@@ -12,6 +12,7 @@ interface AISuggestionsProps {
   activeTab: string;
   activeField?: string;
   fieldValue?: string;
+  activeFieldIndex?: number;
   onApplySuggestion: (suggestion: Suggestion) => void;
   onApplyContextualSuggestion?: (field: string, value: string) => void;
 }
@@ -32,6 +33,7 @@ export default function AISuggestions({
   activeTab, 
   activeField, 
   fieldValue = '', 
+  activeFieldIndex = -1,
   onApplySuggestion, 
   onApplyContextualSuggestion 
 }: AISuggestionsProps) {
@@ -41,6 +43,98 @@ export default function AISuggestions({
   const [isVisible, setIsVisible] = useState(false);
   const [activeView, setActiveView] = useState<'general' | 'contextual'>('general');
 
+  // Calculate writing quality score
+  const calculateWritingScore = (text: string) => {
+    if (!text || text.length < 10) return 0;
+    
+    let score = 70; // Base score
+    
+    // Grammar checks
+    if (text.trim().endsWith('.') || text.trim().endsWith('!')) score += 5;
+    if (text.charAt(0) === text.charAt(0).toUpperCase()) score += 5;
+    
+    // Content quality checks
+    if (text.match(/\d+%|\$\d+|\d+\+/)) score += 10; // Has metrics
+    if (text.match(/^(Led|Managed|Developed|Implemented|Created|Optimized|Delivered|Achieved)/i)) score += 10; // Strong action verb
+    if (text.length > 50 && text.length < 150) score += 5; // Good length
+    if (!text.match(/very|really|quite|pretty|somewhat|rather/i)) score += 5; // No weak words
+    
+    // Penalties
+    if (text.match(/things|stuff|various|many|several|some/)) score -= 10; // Vague language
+    if (text.toLowerCase().split(/\s+/).length < 5) score -= 10; // Too short
+    
+    return Math.max(0, Math.min(100, score));
+  };
+
+  // Analyze text for grammar, style, and content improvements
+  const analyzeWriting = (text: string) => {
+    const suggestions = [];
+    
+    // Grammar and punctuation checks
+    if (text && !text.trim().endsWith('.') && !text.trim().endsWith('!') && text.length > 10) {
+      suggestions.push({
+        type: 'punctuation',
+        issue: 'Missing period',
+        suggestion: `${text.trim()}.`,
+        explanation: 'Professional descriptions should end with proper punctuation'
+      });
+    }
+    
+    // Capitalization check
+    if (text && text.length > 0 && text.charAt(0) !== text.charAt(0).toUpperCase()) {
+      suggestions.push({
+        type: 'capitalization',
+        issue: 'Lowercase start',
+        suggestion: text.charAt(0).toUpperCase() + text.slice(1),
+        explanation: 'Sentences should start with capital letters'
+      });
+    }
+    
+    // Weak words detection
+    const weakWords = ['very', 'really', 'quite', 'pretty', 'somewhat', 'rather'];
+    const foundWeak = weakWords.find(word => text.toLowerCase().includes(word));
+    if (foundWeak) {
+      suggestions.push({
+        type: 'word-choice',
+        issue: `Weak word: "${foundWeak}"`,
+        suggestion: text.replace(new RegExp(foundWeak, 'gi'), '[stronger alternative]'),
+        explanation: 'Avoid weak qualifiers in professional writing'
+      });
+    }
+    
+    // Passive voice detection
+    const passiveIndicators = ['was', 'were', 'been', 'being'];
+    const hasPassive = passiveIndicators.some(word => 
+      text.toLowerCase().includes(word + ' ') && text.toLowerCase().includes('by ')
+    );
+    if (hasPassive) {
+      suggestions.push({
+        type: 'voice',
+        issue: 'Possible passive voice',
+        suggestion: 'Consider using active voice',
+        explanation: 'Active voice is more engaging and direct'
+      });
+    }
+    
+    // Repetitive words
+    const words = text.toLowerCase().split(/\s+/).filter(word => word.length > 3);
+    const wordCounts: Record<string, number> = {};
+    words.forEach(word => {
+      wordCounts[word] = (wordCounts[word] || 0) + 1;
+    });
+    const repeatedWords = Object.entries(wordCounts).filter(([word, count]) => (count as number) > 2);
+    if (repeatedWords.length > 0) {
+      suggestions.push({
+        type: 'repetition',
+        issue: `Repeated word: "${repeatedWords[0][0]}"`,
+        suggestion: 'Consider using synonyms for variety',
+        explanation: 'Varied vocabulary keeps writing engaging'
+      });
+    }
+    
+    return suggestions;
+  };
+
   // Generate contextual AI suggestions for the active field
   const generateContextualSuggestions = async () => {
     if (!activeField || !fieldValue) return [];
@@ -49,6 +143,19 @@ export default function AISuggestions({
     await new Promise(resolve => setTimeout(resolve, 600));
 
     const contextualSugs: any[] = [];
+    
+    // First, analyze the writing quality
+    const writingAnalysis = analyzeWriting(fieldValue);
+    writingAnalysis.forEach((analysis, index) => {
+      contextualSugs.push({
+        id: `writing-${index}`,
+        type: 'writing-help',
+        title: `Fix ${analysis.issue}`,
+        suggestion: analysis.suggestion,
+        reasoning: analysis.explanation,
+        category: analysis.type
+      });
+    });
 
     switch (activeField) {
       case 'summary':
@@ -63,17 +170,77 @@ export default function AISuggestions({
             reasoning: 'Professional summaries should be 80-120 words and highlight your expertise',
           });
         }
+        
+        // Check for missing key elements
+        if (fieldValue && !fieldValue.match(/\d+\s*(years?|yrs?)/i)) {
+          contextualSugs.push({
+            id: 'summary-experience',
+            type: 'content',
+            title: 'Add years of experience',
+            suggestion: `${fieldValue.replace(/^./, match => match.toUpperCase())} with ${cvData.experience.length}+ years of experience`,
+            reasoning: 'Including years of experience provides immediate context to employers'
+          });
+        }
+        
+        if (fieldValue && !fieldValue.match(/seeking|looking|pursuing|interested/i)) {
+          contextualSugs.push({
+            id: 'summary-objective',
+            type: 'content',
+            title: 'Add career objective',
+            suggestion: `${fieldValue} Seeking to leverage expertise in a challenging senior role.`,
+            reasoning: 'A clear objective helps employers understand your career goals'
+          });
+        }
         break;
 
       case 'experience-description':
-        if (fieldValue && !fieldValue.match(/\d+%|\$\d+|\d+\+|increased|improved|reduced|achieved/i)) {
+        // Check for quantifiable metrics
+        if (fieldValue && !fieldValue.match(/\d+%|\$\d+|\d+\+|increased|improved|reduced|achieved|delivered|managed|led/i)) {
           const metrics = generateRelevantMetrics(fieldValue);
+          const enhancedDescription = `${fieldValue.trim()} ${metrics}`;
           contextualSugs.push({
             id: 'exp-quantify',
             type: 'improve',
             title: 'Add measurable impact',
-            suggestion: `${fieldValue.trim()} ${metrics}`,
-            reasoning: 'Quantified achievements make your experience more credible',
+            suggestion: enhancedDescription,
+            reasoning: 'Quantified achievements make your experience more credible and impressive to employers',
+          });
+        }
+        
+        // Suggest action words if the description is lacking strong verbs
+        if (fieldValue && !fieldValue.match(/^(Led|Managed|Developed|Implemented|Created|Optimized|Delivered|Achieved|Improved|Reduced|Increased)/i)) {
+          const actionVerbs = ['Led', 'Managed', 'Developed', 'Implemented', 'Created', 'Optimized'];
+          const randomVerb = actionVerbs[Math.floor(Math.random() * actionVerbs.length)];
+          contextualSugs.push({
+            id: 'exp-action-verb',
+            type: 'improve',
+            title: 'Start with a strong action verb',
+            suggestion: `${randomVerb} ${fieldValue.toLowerCase()}`,
+            reasoning: 'Starting bullet points with action verbs makes your experience more impactful',
+          });
+        }
+        
+        // Check for vague language
+        const vagueWords = ['things', 'stuff', 'various', 'many', 'several', 'some'];
+        const foundVague = vagueWords.find(word => fieldValue.toLowerCase().includes(word));
+        if (foundVague) {
+          contextualSugs.push({
+            id: 'exp-specific',
+            type: 'word-choice',
+            title: 'Be more specific',
+            suggestion: fieldValue.replace(new RegExp(foundVague, 'gi'), '[specific details]'),
+            reasoning: `Replace "${foundVague}" with specific details to make your impact clearer`
+          });
+        }
+        
+        // Suggest adding technology/tools if missing
+        if (fieldValue && fieldValue.length > 20 && !fieldValue.match(/using|with|through|via/i)) {
+          contextualSugs.push({
+            id: 'exp-tools',
+            type: 'content',
+            title: 'Mention tools or technologies',
+            suggestion: `${fieldValue} using [relevant tools/technologies]`,
+            reasoning: 'Mentioning specific tools shows technical competency'
           });
         }
         break;
@@ -86,7 +253,63 @@ export default function AISuggestions({
             type: 'enhance',
             title: 'Add relevant skills',
             suggestion: suggestedSkills.slice(0, 3).join(', '),
-            reasoning: 'These skills are commonly required in your field',
+            reasoning: 'These skills are commonly valued in your field and align with your experience',
+          });
+        }
+        
+        // Suggest skill categories if they have less than 5 skills
+        if (cvData.skills.length < 5) {
+          const skillCategories = ['Technical Skills', 'Soft Skills', 'Tools & Software', 'Industry Knowledge'];
+          contextualSugs.push({
+            id: 'skills-categories',
+            type: 'enhance',
+            title: 'Consider organizing skills by category',
+            suggestion: 'Group your skills: Technical (programming languages, tools), Soft (communication, leadership), Industry-specific (domain knowledge)',
+            reasoning: 'Well-organized skills sections are easier for recruiters to scan and understand',
+          });
+        }
+        break;
+
+      case 'education-description':
+        if (fieldValue && fieldValue.length < 30) {
+          contextualSugs.push({
+            id: 'edu-expand',
+            type: 'enhance',
+            title: 'Enhance education details',
+            suggestion: `${fieldValue} Relevant coursework included Advanced Data Structures, Machine Learning, and Software Engineering. Graduated Magna Cum Laude with active participation in coding competitions and student tech initiatives.`,
+            reasoning: 'Detailed education descriptions showcase relevant learning and achievements',
+          });
+        }
+        
+        if (fieldValue && !fieldValue.match(/relevant|coursework|project|honor|award|gpa|magna|cum laude/i)) {
+          contextualSugs.push({
+            id: 'edu-details',
+            type: 'improve',
+            title: 'Add academic achievements',
+            suggestion: `${fieldValue} Relevant coursework: [List key subjects]. Notable achievement: [Academic honors, projects, or GPA if 3.5+].`,
+            reasoning: 'Including specific coursework and achievements makes your education more compelling',
+          });
+        }
+        
+        // Check for missing GPA mention (if it's good)
+        if (fieldValue && fieldValue.length > 10 && !fieldValue.match(/gpa|grade|3\.|4\./i)) {
+          contextualSugs.push({
+            id: 'edu-gpa',
+            type: 'content',
+            title: 'Consider mentioning GPA',
+            suggestion: `${fieldValue} (GPA: 3.8/4.0)`,
+            reasoning: 'Include GPA if 3.5 or higher to demonstrate academic excellence'
+          });
+        }
+        
+        // Suggest adding projects if missing
+        if (fieldValue && !fieldValue.match(/project|thesis|research|capstone/i)) {
+          contextualSugs.push({
+            id: 'edu-projects',
+            type: 'content',
+            title: 'Mention relevant projects',
+            suggestion: `${fieldValue} Key project: [Describe a relevant academic project or thesis]`,
+            reasoning: 'Academic projects demonstrate practical application of knowledge'
           });
         }
         break;
@@ -99,22 +322,51 @@ export default function AISuggestions({
   const generateRelevantMetrics = (description: string): string => {
     const lowerDesc = description.toLowerCase();
     if (lowerDesc.includes('sales') || lowerDesc.includes('revenue')) {
-      return 'Increased revenue by 25% and exceeded quarterly targets by $50K.';
-    } else if (lowerDesc.includes('develop') || lowerDesc.includes('code')) {
-      return 'Reduced loading time by 40% and improved system performance by 60%.';
-    } else if (lowerDesc.includes('manage') || lowerDesc.includes('lead')) {
-      return 'Managed team of 8+ members and improved productivity by 35%.';
-    } else if (lowerDesc.includes('customer') || lowerDesc.includes('support')) {
-      return 'Achieved 95% customer satisfaction rate and reduced response time by 50%.';
+      return 'Increased revenue by 25% through strategic client engagement and exceeded quarterly targets by $150K.';
+    } else if (lowerDesc.includes('develop') || lowerDesc.includes('code') || lowerDesc.includes('software')) {
+      return 'Reduced page load time by 40% and improved system performance by 60%, resulting in 15% higher user retention.';
+    } else if (lowerDesc.includes('manage') || lowerDesc.includes('lead') || lowerDesc.includes('team')) {
+      return 'Managed cross-functional team of 8+ members and improved delivery efficiency by 35%, completing projects 2 weeks ahead of schedule.';
+    } else if (lowerDesc.includes('customer') || lowerDesc.includes('support') || lowerDesc.includes('service')) {
+      return 'Achieved 95% customer satisfaction rate and reduced average response time by 50%, handling 200+ inquiries daily.';
+    } else if (lowerDesc.includes('market') || lowerDesc.includes('campaign') || lowerDesc.includes('advertising')) {
+      return 'Drove 45% increase in brand awareness and generated 300+ qualified leads through targeted digital campaigns.';
+    } else if (lowerDesc.includes('data') || lowerDesc.includes('analysis') || lowerDesc.includes('report')) {
+      return 'Analyzed complex datasets of 10M+ records and delivered insights that improved decision-making accuracy by 30%.';
+    } else if (lowerDesc.includes('budget') || lowerDesc.includes('cost') || lowerDesc.includes('financial')) {
+      return 'Managed $2M annual budget and reduced operational costs by 20% while maintaining quality standards.';
+    } else if (lowerDesc.includes('train') || lowerDesc.includes('mentor') || lowerDesc.includes('teach')) {
+      return 'Trained and mentored 15+ junior staff members, resulting in 80% internal promotion rate and improved team productivity.';
     } else {
-      return 'Achieved 90% success rate and completed projects 20% ahead of schedule.';
+      return 'Achieved 90% success rate in project delivery and completed initiatives 20% ahead of schedule, exceeding performance targets.';
     }
   };
 
   const generateSkillSuggestions = (): string[] => {
     const existingSkills = cvData.skills.map(s => s.toLowerCase());
-    const skillSuggestions = ['Leadership', 'Project Management', 'Problem Solving', 'Communication'];
-    return skillSuggestions.filter(skill => !existingSkills.includes(skill.toLowerCase()));
+    const experienceText = cvData.experience.map(exp => exp.description).join(' ').toLowerCase();
+    
+    // Dynamic skill suggestions based on experience
+    const suggestedSkills: string[] = [];
+    
+    // Technical skills based on experience keywords
+    if (experienceText.includes('javascript') || experienceText.includes('js')) suggestedSkills.push('JavaScript');
+    if (experienceText.includes('react')) suggestedSkills.push('React');
+    if (experienceText.includes('python')) suggestedSkills.push('Python');
+    if (experienceText.includes('sql') || experienceText.includes('database')) suggestedSkills.push('SQL');
+    if (experienceText.includes('aws') || experienceText.includes('cloud')) suggestedSkills.push('AWS');
+    if (experienceText.includes('manage') || experienceText.includes('lead')) suggestedSkills.push('Leadership');
+    if (experienceText.includes('project')) suggestedSkills.push('Project Management');
+    if (experienceText.includes('team') || experienceText.includes('collaborate')) suggestedSkills.push('Team Collaboration');
+    if (experienceText.includes('problem') || experienceText.includes('solve')) suggestedSkills.push('Problem Solving');
+    if (experienceText.includes('communicate') || experienceText.includes('present')) suggestedSkills.push('Communication');
+    
+    // Add general professional skills if no specific technical skills found
+    if (suggestedSkills.length === 0) {
+      suggestedSkills.push('Critical Thinking', 'Time Management', 'Adaptability', 'Strategic Planning');
+    }
+    
+    return suggestedSkills.filter(skill => !existingSkills.includes(skill.toLowerCase())).slice(0, 5);
   };
   const generateSuggestions = async (): Promise<Suggestion[]> => {
     setIsAnalyzing(true);
@@ -262,7 +514,7 @@ export default function AISuggestions({
   return (
     <div 
       data-ai-assistant
-      className="fixed bottom-6 right-6 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[500px] overflow-hidden"
+      className="fixed bottom-6 right-6 w-96 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 max-h-[700px] overflow-hidden"
       onMouseDown={(e) => e.preventDefault()} // Prevent losing focus when clicking
     >
       {/* Header with Tabs */}
@@ -289,13 +541,18 @@ export default function AISuggestions({
           <button
             onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
             onClick={() => setActiveView('contextual')}
-            className={`flex-1 text-sm py-2 px-3 rounded transition-colors ${
+            className={`flex-1 text-sm py-2 px-3 rounded transition-colors relative ${
               activeView === 'contextual' 
                 ? 'bg-white/20 text-white' 
                 : 'text-white/70 hover:text-white'
             }`}
           >
             Writing Help {activeField && `(${activeField.replace('-', ' ')})`}
+            {contextualSuggestions.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                {contextualSuggestions.length}
+              </span>
+            )}
           </button>
           <button
             onMouseDown={(e) => e.preventDefault()} // Prevent focus loss
@@ -312,7 +569,7 @@ export default function AISuggestions({
       </div>
 
       {/* Content */}
-      <div className="max-h-96 overflow-y-auto">
+      <div className="max-h-[550px] overflow-y-auto">
         {isAnalyzing ? (
           <div className="p-4 flex items-center gap-3">
             <svg className="animate-spin w-5 h-5 text-blue-600" viewBox="0 0 24 24">
@@ -324,14 +581,47 @@ export default function AISuggestions({
         ) : activeView === 'contextual' && contextualSuggestions.length > 0 ? (
           <div className="p-4 space-y-4">
             {activeField && (
-              <div className="text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-full inline-block mb-4">
-                Editing: {activeField.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+              <div className="flex items-center justify-between mb-4">
+                <div className="text-sm text-blue-600 bg-blue-50 px-3 py-2 rounded-full">
+                  Editing: {activeField.replace('-', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </div>
+                {fieldValue && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-600">Writing Quality:</span>
+                    <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      calculateWritingScore(fieldValue) >= 80 ? 'bg-green-100 text-green-700' :
+                      calculateWritingScore(fieldValue) >= 60 ? 'bg-yellow-100 text-yellow-700' :
+                      'bg-red-100 text-red-700'
+                    }`}>
+                      {calculateWritingScore(fieldValue)}%
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {contextualSuggestions.map((suggestion) => (
               <div key={suggestion.id} className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 border border-blue-200">
                 <div className="flex items-start justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-gray-900">{suggestion.title}</h4>
+                  <div className="flex items-center gap-2">
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center text-sm ${
+                      suggestion.category === 'punctuation' ? 'bg-red-100 text-red-600' :
+                      suggestion.category === 'capitalization' ? 'bg-orange-100 text-orange-600' :
+                      suggestion.category === 'word-choice' ? 'bg-yellow-100 text-yellow-600' :
+                      suggestion.category === 'voice' ? 'bg-purple-100 text-purple-600' :
+                      suggestion.category === 'repetition' ? 'bg-pink-100 text-pink-600' :
+                      'bg-green-100 text-green-600'
+                    }`}>
+                      {suggestion.type === 'writing-help' ? 
+                        (suggestion.category === 'punctuation' ? '.' :
+                         suggestion.category === 'capitalization' ? 'Aa' :
+                         suggestion.category === 'word-choice' ? '📝' :
+                         suggestion.category === 'voice' ? '🔄' :
+                         suggestion.category === 'repetition' ? '🔁' : '✨') : 
+                        '💡'
+                      }
+                    </div>
+                    <h4 className="text-sm font-semibold text-gray-900">{suggestion.title}</h4>
+                  </div>
                   <div className="w-2 h-2 bg-green-500 rounded-full flex-shrink-0 mt-1"></div>
                 </div>
                 <p className="text-sm text-gray-600 mb-3">{suggestion.reasoning}</p>

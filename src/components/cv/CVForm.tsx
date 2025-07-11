@@ -13,7 +13,7 @@ interface CVFormProps {
   cvData: CVData;
   onChange: (data: Partial<CVData>) => void;
   onDataRefresh?: () => void;
-  onFieldFocus?: (field: string, value: string) => void;
+  onFieldFocus?: (field: string, value: string, index?: number) => void;
   onFieldBlur?: () => void;
 }
 
@@ -523,7 +523,7 @@ export default function CVForm({ cvData, onChange, onDataRefresh, onFieldFocus, 
                 <textarea
                   value={exp.description}
                   onChange={(e) => handleExperienceChange(index, 'description', e.target.value)}
-                  onFocus={() => onFieldFocus?.('experience-description', exp.description)}
+                  onFocus={() => onFieldFocus?.('experience-description', exp.description, index)}
                   onBlur={() => onFieldBlur?.()}
                   rows={3}
                   className="w-full px-3 py-2 border border-gray-300  rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-gray-900  bg-white   placeholder-gray-500 "
@@ -783,7 +783,7 @@ export default function CVForm({ cvData, onChange, onDataRefresh, onFieldFocus, 
                 <textarea
                   value={edu.description}
                   onChange={(e) => handleEducationChange(index, 'description', e.target.value)}
-                  onFocus={() => onFieldFocus?.('education-description', edu.description)}
+                  onFocus={() => onFieldFocus?.('education-description', edu.description, index)}
                   onBlur={() => onFieldBlur?.()}
                   rows={3}
                   className="w-full px-3 lg:px-4 py-2 lg:py-3 border border-gray-300  rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900  bg-white   placeholder-gray-500 "

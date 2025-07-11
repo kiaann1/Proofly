@@ -27,15 +27,53 @@ export default function AITooltip({ fieldType, context, cvData, children, classN
   const [tooltipContent, setTooltipContent] = useState<AITooltipContent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // Analyze content for context-aware suggestions
+  const analyzeContent = (text: string) => {
+    const suggestions = [];
+    const tips = [];
+
+    if (fieldType === 'experience') {
+      if (!text.match(/\d+%|\$\d+|\d+\+/)) {
+        suggestions.push("Add quantifiable metrics to show your impact");
+      }
+      if (!text.match(/^(Led|Managed|Developed|Implemented|Created|Optimized)/i)) {
+        suggestions.push("Start with a strong action verb");
+      }
+      if (text.match(/responsible for|duties included/i)) {
+        tips.push("Focus on achievements rather than responsibilities");
+      }
+    }
+
+    if (fieldType === 'summary') {
+      if (text.length < 50) {
+        suggestions.push("Expand your summary to 80-120 words for better impact");
+      }
+      if (!text.match(/\d+\s*(years?|yrs?)/i)) {
+        suggestions.push("Include your years of experience");
+      }
+      if (!text.match(/seeking|looking|pursuing|interested/i)) {
+        suggestions.push("Add what type of role you're seeking");
+      }
+      if (text.match(/very|really|quite|pretty/i)) {
+        tips.push("Avoid weak qualifiers - be direct and confident");
+      }
+    }
+
+    return { suggestions, tips };
+  };
+
   // Generate AI-powered suggestions based on field type and context
   const generateTooltipContent = async (): Promise<AITooltipContent> => {
     // Simulate AI processing delay
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    // Analyze the current context if provided
+    const contextAnalysis = context ? analyzeContent(context) : null;
+
     const baseContent: Record<string, AITooltipContent> = {
       experience: {
         title: "🤖 AI Experience Tips",
-        suggestions: [
+        suggestions: contextAnalysis?.suggestions || [
           "Use action verbs (Led, Developed, Implemented, Optimized)",
           "Quantify achievements with numbers and percentages",
           "Focus on results and impact, not just responsibilities",
@@ -46,7 +84,7 @@ export default function AITooltip({ fieldType, context, cvData, children, classN
           "Increased sales by 35% through implementation of new CRM system",
           "Reduced processing time by 40% by automating manual workflows"
         ],
-        tips: [
+        tips: contextAnalysis?.tips || [
           "Start bullet points with strong action verbs",
           "Include specific metrics when possible (%, $, time saved)",
           "Use the STAR method (Situation, Task, Action, Result)",
@@ -135,7 +173,7 @@ export default function AITooltip({ fieldType, context, cvData, children, classN
       },
       summary: {
         title: "📝 AI Summary Assistant",
-        suggestions: [
+        suggestions: contextAnalysis?.suggestions || [
           "Start with your professional title and years of experience",
           "Highlight 2-3 key achievements or skills",
           "Mention specific industries or technologies",
@@ -145,7 +183,7 @@ export default function AITooltip({ fieldType, context, cvData, children, classN
           "Experienced Software Engineer with 5+ years developing scalable web applications. Led teams of 10+ developers and increased system performance by 40%. Seeking senior role in fintech.",
           "Marketing Manager with proven track record of driving 50%+ growth. Expert in digital marketing, data analytics, and team leadership across B2B and B2C sectors."
         ],
-        tips: [
+        tips: contextAnalysis?.tips || [
           "Keep it 2-3 sentences and under 100 words",
           "Tailor to specific job you're applying for",
           "Use metrics and specific achievements",

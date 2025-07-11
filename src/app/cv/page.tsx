@@ -52,6 +52,7 @@ export default function CVBuilderPage() {
   const [isTabSwitching, setIsTabSwitching] = useState(false);
   const [activeField, setActiveField] = useState<string>('');
   const [activeFieldValue, setActiveFieldValue] = useState<string>('');
+  const [activeFieldIndex, setActiveFieldIndex] = useState<number>(-1);
 
   // Load data on component mount
   useEffect(() => {
@@ -205,9 +206,10 @@ export default function CVBuilderPage() {
   };
 
   // Field focus handlers for contextual AI
-  const handleFieldFocus = (field: string, value: string) => {
+  const handleFieldFocus = (field: string, value: string, index: number = -1) => {
     setActiveField(field);
     setActiveFieldValue(value);
+    setActiveFieldIndex(index);
   };
 
   const handleFieldBlur = () => {
@@ -219,12 +221,15 @@ export default function CVBuilderPage() {
       if (!aiAssistant?.matches(':hover')) {
         setActiveField('');
         setActiveFieldValue('');
+        setActiveFieldIndex(-1);
       }
     }, 500); // Increased delay
   };
 
   // Contextual AI suggestion handler
   const handleApplyContextualSuggestion = (field: string, value: string) => {
+    console.log('Applying suggestion:', { field, value, activeFieldIndex });
+    
     switch (field) {
       case 'summary':
         setCvData(prev => ({
@@ -234,32 +239,59 @@ export default function CVBuilderPage() {
             summary: value
           }
         }));
+        setActiveFieldValue(value);
         break;
       
       case 'experience-description':
-        // Find the active experience and update it
-        const activeExpIndex = cvData.experience.findIndex(exp => exp.description === activeFieldValue);
-        if (activeExpIndex >= 0) {
+        if (activeFieldIndex >= 0 && activeFieldIndex < cvData.experience.length) {
           const newExperience = [...cvData.experience];
-          newExperience[activeExpIndex] = {
-            ...newExperience[activeExpIndex],
+          newExperience[activeFieldIndex] = {
+            ...newExperience[activeFieldIndex],
             description: value
           };
           setCvData(prev => ({ ...prev, experience: newExperience }));
+          setActiveFieldValue(value);
+        } else {
+          // Fallback: try to find by current value
+          const activeExpIndex = cvData.experience.findIndex(exp => exp.description === activeFieldValue);
+          if (activeExpIndex >= 0) {
+            const newExperience = [...cvData.experience];
+            newExperience[activeExpIndex] = {
+              ...newExperience[activeExpIndex],
+              description: value
+            };
+            setCvData(prev => ({ ...prev, experience: newExperience }));
+            setActiveFieldValue(value);
+          } else {
+            console.warn('Could not find experience to update');
+          }
         }
         break;
       
       case 'skills':
-        const newSkills = value.split(', ');
+        const newSkills = value.split(', ').map(s => s.trim()).filter(s => s.length > 0);
         setCvData(prev => ({
           ...prev,
           skills: [...new Set([...prev.skills, ...newSkills])]
         }));
+        setActiveFieldValue([...cvData.skills, ...newSkills].join(', '));
         break;
+        
+      case 'education-description':
+        if (activeFieldIndex >= 0 && activeFieldIndex < cvData.education.length) {
+          const newEducation = [...cvData.education];
+          newEducation[activeFieldIndex] = {
+            ...newEducation[activeFieldIndex],
+            description: value
+          };
+          setCvData(prev => ({ ...prev, education: newEducation }));
+          setActiveFieldValue(value);
+        }
+        break;
+        
+      default:
+        console.warn('Unknown field type:', field);
     }
-    
-    // Update the active field value
-    setActiveFieldValue(value);
   };
 
   if (isLoading) {
@@ -470,15 +502,15 @@ export default function CVBuilderPage() {
         </div>
       </div>
 
-      {/* AI Suggestions Assistant */}
-      <AISuggestions 
-        cvData={cvData} 
-        activeTab={activeTab} 
-        activeField={activeField}
-        fieldValue={activeFieldValue}
-        onApplySuggestion={handleApplySuggestion}
-        onApplyContextualSuggestion={handleApplyContextualSuggestion}
-      />
+      {/* AI Suggestions Assistant */}        <AISuggestions
+          cvData={cvData}
+          activeTab={activeTab}
+          activeField={activeField}
+          fieldValue={activeFieldValue}
+          activeFieldIndex={activeFieldIndex}
+          onApplySuggestion={handleApplySuggestion}
+          onApplyContextualSuggestion={handleApplyContextualSuggestion}
+        />
     </AppLayout>
   );
 }
